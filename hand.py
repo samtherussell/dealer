@@ -206,6 +206,7 @@ class Hand():
         if current_player.holdings < diff:
             raise Exception("cannot call")
         current_player.bet(diff)
+        self.pot += diff
 
     def raise_bet(self, current_player, action):
         action = action.split(" ")
