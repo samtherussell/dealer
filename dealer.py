@@ -1,5 +1,4 @@
  
-import random
 import socket
 
 from game import Game
@@ -7,8 +6,13 @@ from player import Player
 from communicator import Communicator 
  
 def main():
-    
-    num_players = int(input("# players: "))
+
+    while True:    
+        num_players = int(input("# players: "))
+        if num_players > 1:
+            break
+        print("must have more than one player")
+
     players = run_lobby(num_players)
  
     print("players:", players)

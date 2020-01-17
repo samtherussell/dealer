@@ -1,3 +1,7 @@
+def format_cards(cards):
+    # return " ".join(["{:02d}".format(card.code) for card in cards])
+    return ", ".join([card.name for card in cards])
+
 class Communicator():
  
     def __init__(self, conn):
@@ -10,12 +14,10 @@ class Communicator():
         return self.send(d + "\n")
  
     def send_hand(self, hand):
-        cards = " ".join(["{:02d}".format(card.code) for card in hand])
-        self.send_line("Hand\n" + cards)
+        self.send_line("Hand\n" + format_cards(hand))
  
     def send_card_reveal(self, reveals):
-        cards = " ".join(["{:02d}".format(card.code) for card in reveals])
-        self.send_line("Reveal {}\n".format(len(reveals)) + cards)
+        self.send_line("Reveal {}\n{}".format(len(reveals), format_cards(reveals)))
  
     def recv(self, d):
         return self.conn.recv(d).decode("utf8").strip()
