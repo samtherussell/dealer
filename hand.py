@@ -5,7 +5,7 @@ from hand_scorer import get_hand_max
 class HandPlayer(Player):
  
     def __init__(self, player, hand):
-        super().__init__(player.ID, player.name, player.coms)
+        super().__init__(player.ID, player.name, player.coms, player.holdings)
         self.bet_amount = 0
         self.folded = False
         self.hand = hand
@@ -54,11 +54,12 @@ class Hand():
         self.deck = deck
         self.pot = 0
         self.bet = 0
-        self.all_hand_players = players
+        self.all_players = players
          
         self.discard = []
-        self.hands = deal_hands(self.deck, len(self.all_hand_players))
-        self.playing_players = [HandPlayer(p, h) for p,h in zip(players, self.hands)]
+        self.hands = deal_hands(self.deck, len(players))
+        self.all_hand_players = [HandPlayer(p, h) for p,h in zip(players, self.hands)]
+        self.playing_players = list(self.all_hand_players)
         self.face_down_community_cards = deal_comm_cards(self.deck, self.discard)
         self.face_up_community_cards = []
  
@@ -92,6 +93,12 @@ class Hand():
             self.make_winner(e.player)
 
         self.put_cards_back_in_deck()
+        self.update_player_holdings()
+
+    def update_player_holdings(self):
+        for player,hand_player in zip(self.all_players, self.all_hand_players):
+            player.holdings = hand_player.holdings
+            print(player.holdings)
 
     def make_winner(self, winner):
         print("winner:", winner)
@@ -163,8 +170,8 @@ class Hand():
             if not current_player.folded:
                 available_options = get_players_options(current_player, self.bet, has_bet)
                 has_bet.add(current_player.ID)
-                current_player.coms.send_line("current pot: {}\ncurrent pot bet: {}\nyour current bet: {}"\
-                                              .format(self.pot, self.bet, current_player.bet_amount))
+                current_player.coms.send_line("current pot: {}\ncurrent pot bet: {}\nyour current bet: {}\nyour holdings: {}"\
+                                              .format(self.pot, self.bet, current_player.bet_amount, current_player.holdings))
                 
                 while True:
                     current_player.coms.send_line("/".join(available_options))

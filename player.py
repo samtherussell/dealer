@@ -1,10 +1,10 @@
 class Player():
  
-    def __init__(self, ID, name, coms):
+    def __init__(self, ID, name, coms, holdings=100):
         self.ID = ID
         self.name = name
         self.coms = coms
-        self.holdings = 100
+        self.holdings = holdings
  
     def has_money(self):
         return self.holdings > 0
