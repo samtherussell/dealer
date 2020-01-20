@@ -189,12 +189,13 @@ class Hand():
                     try:
                         if action == "Fold":
                             current_player.fold()
+                            display = "Folded"
                             break
                         elif action == "Call":
-                            self.call_bet(current_player)
+                            display = self.call_bet(current_player)
                             break
                         elif "Raise" in available_options and action.startswith("Raise"):
-                            self.raise_bet(current_player, action)
+                            display = self.raise_bet(current_player, action)
                             round_end_index = prevp(current_index)
                             break
                         else:
@@ -202,8 +203,7 @@ class Hand():
                     except Exception as e:
                         current_player.coms.send_line(str(e))
 
-
-                self.notify_players("{} played {}".format(current_player.name, action), exclude=current_player.ID)
+                self.notify_players("{} {}".format(current_player.name, display), exclude=current_player.ID)
 
             left_in = [p for p in self.pot.playing_players if not p.folded]
             if len(left_in) < 2:
@@ -223,6 +223,7 @@ class Hand():
             raise Exception("not enough money to call")
         current_player.bet(diff)
         self.pot.amount  += diff
+        return "Called"
 
     def raise_bet(self, current_player, action):
         action = action.split(" ")
@@ -235,7 +236,8 @@ class Hand():
         current_player.bet(diff)
         self.pot.amount  += diff
         self.max_bet += raise_amount
-        print("pot raised by {} to {}".format(raise_amount, self.max_bet))
+        print("Pot raised by {} to {}".format(raise_amount, self.max_bet))
+        return "Raised by {} to {}".format(raise_amount, self.max_bet)
 
     def reveal_cards(self, num):
         cards = self.face_down_community_cards[:num]
