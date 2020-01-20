@@ -27,6 +27,30 @@ class Pot:
     def __repr__(self):
         return "Pot({}, {}, {})".format(self.amount, self.bet, self.playing_players)
 
+class Bet:
+
+    def __init__(self, amount, who):
+        self.amount = amount
+        self.who = who
+
+class Bets(dict):
+
+    _total_raise = None
+    _max_raise = None
+
+    def total_raise(self):
+        if self._total_raise == None:
+            self._total_raise = 0
+            for bet in self:
+                self._total_raise += bet.amount
+        return self._total_raise
+
+    def max_raise(self):
+        if self._max_raise == None:
+            self._max_raise = max((bet.amount for bet in self))
+        return self._max_raise
+
+
 def deal_hands(deck, num_players):
  
     hands = [[] for _ in range(num_players)]
@@ -52,7 +76,13 @@ def get_players_options(current_player, current_bet, has_bet):
     if current_player.ID not in has_bet and current_player.holdings > diff:
         options.append("Raise")
     return options
- 
+
+def get_raise_amount(action):
+    action = action.split(" ")
+    if len(action) != 2:
+        raise Exception("there is no amount to raise by")
+    return int(action[1])
+
 class OnePlayerLeftException(Exception):
     def __init__(self, player):
         self.player = player
@@ -72,6 +102,7 @@ class Hand():
  
         self.start_pos = start_pos
         self.pot = Pot(0, 0, list(self.all_hand_players))
+        self.pots = [self.pot]
 
         print("Hand initiated:", str(self))
 
@@ -85,11 +116,10 @@ class Hand():
 
         self.notify_players("----New Hand----")
         self.notify_player_statuses()
-        self.assign_blinds()
         self.deal_hands()
 
         try:
-            self.run_bet_round()
+            self.run_bet_round(blinds=True)
             self.reveal_cards(3)
             self.run_bet_round()
             self.reveal_cards(1)
@@ -144,25 +174,27 @@ class Hand():
         self.notify_players("big blind is {}".format(big_blind))
         self.notify_players("small blind is {}".format(small_blind) if small_blind_enable else "no small blind")
 
+        bets = []
         for i,player in enumerate(self.pot.playing_players):
             if i == (self.start_pos-1) % len(self.pot.playing_players):
                 player.bet(big_blind)
                 player.coms.send_line("You are big blind")
+                bets.append(Bet(big_blind, player))
             elif small_blind_enable and i == (self.start_pos-2) % len(self.pot.playing_players):
                 player.bet(small_blind)
                 player.coms.send_line("You are small blind")
+                bets.append(Bet(small_blind, player))
             else:
                 player.coms.send_line("You are not the blind")
 
-        self.pot.bet = big_blind
-        self.pot.amount = big_blind + (small_blind if small_blind_enable else 0)
+        return bets
 
     def deal_hands(self):
         for player in self.pot.playing_players:
             player.coms.send_hand(player.hand)
         print("dealt hands")
 
-    def run_bet_round(self):
+    def run_bet_round(self, blinds=False):
 
         def prevp(index):
             return (index - 1) % len(self.pot.playing_players)
@@ -171,11 +203,17 @@ class Hand():
             return (index + 1) % len(self.pot.playing_players)
 
         has_bet = set()
+        bets = Bets()
+
+        blind_bets = self.assign_blinds()
+        for bet in blind_bets:
+            bets[bet.current_player.ID] = bet
+
         current_index = self.start_pos
         round_end_index = prevp(current_index)
         while True:
             current_player = self.pot.playing_players[current_index]
-            if not current_player.folded:
+            if not current_player.folded and current_player.has_money():
                 available_options = get_players_options(current_player, self.pot.bet, has_bet)
                 has_bet.add(current_player.ID)
                 current_player.coms.send_line("current pot: {}\ncurrent pot bet: {}\nyour current bet: {}\nyour holdings: {}" \
@@ -192,10 +230,10 @@ class Hand():
                             display = "Folded"
                             break
                         elif action == "Call":
-                            display = self.call_bet(current_player)
+                            display = self.call_bet(current_player, bets)
                             break
                         elif "Raise" in available_options and action.startswith("Raise"):
-                            display = self.raise_bet(current_player, action)
+                            display = self.raise_bet(current_player, action, bets)
                             round_end_index = prevp(current_index)
                             break
                         else:
@@ -204,6 +242,35 @@ class Hand():
                         current_player.coms.send_line(str(e))
 
                 self.notify_players("{} {}".format(current_player.name, display), exclude=current_player.ID)
+
+            if all([bet.amount == bets.max_raise() for bet in bets]):
+                self.pot.bet += bets.max_raise()
+                self.pot.amount += bets.total_raise()
+            else:
+                bets.sort(key=lambda x: x.amount)
+                current_pot = self.pots.pop()
+                base_pot_amount = current_pot.amount
+                prev_pot_bet = current_pot.bet
+                while len(bets) > 0:
+                    bet = bets[0]
+                    new_bet = bet.amount + prev_pot_bet
+                    new_pot = base_pot_amount + new_bet * len(bets)
+                    self.pots.append(Pot(new_pot, new_bet, [bet.who for bet in bets]))
+                    for bet in bets:
+                        bet.amount -= bet.amount
+                    bets = [bet for bet in bets if bet.total_bet <= 0]
+                    prev_pot_bet = new_bet
+                    base_pot_amount = 0
+
+            larger_pot = self.pot
+            smaller_pot_amount = self.prev_pot
+            smaller_pot_bet =
+            smaller_pot_players = larger_pot.playing_players
+            larger_pot_players = list(smaller_pot_players)
+            larger_pot_players.remove(current_player)
+            larger_pot.playing_players = larger_pot_players
+
+            smaller_pot = Pot(self.pot.amount, smaller_pot_bet, )
 
             left_in = [p for p in self.pot.playing_players if not p.folded]
             if len(left_in) < 2:
@@ -217,27 +284,27 @@ class Hand():
         self.start_pos = self.start_pos % len(self.pot.playing_players)
 
 
-    def call_bet(self, current_player):
-        diff = self.pot.bet - current_player.bet_amount
-        if current_player.holdings < diff:
-            raise Exception("not enough money to call")
+    def call_bet(self, current_player, bets):
+        diff = min(self.pot.bet - current_player.bet_amount, current_player.holdings)
         current_player.bet(diff)
-        self.pot.amount  += diff
+        if current_player.ID in bets:
+            bets[current_player.ID].amount += diff
+        else:
+            bets[current_player.ID] = Bet(diff, current_player)
         return "Called"
 
-    def raise_bet(self, current_player, action):
-        action = action.split(" ")
-        if len(action) != 2:
-            raise Exception("there is no amount to raise by")
-        raise_amount = int(action[1])
-        diff = (self.pot.bet - current_player.bet_amount) + raise_amount
+    def raise_bet(self, current_player, action, bets):
+        raise_amount = get_raise_amount(action)
+        diff = (bets.max_bet - current_player.bet_amount) + raise_amount
         if current_player.holdings < diff:
             raise Exception("not enough money to raise by " + str(raise_amount))
         current_player.bet(diff)
-        self.pot.amount  += diff
-        self.pot.bet += raise_amount
-        print("Pot raised by {} to {}".format(raise_amount, self.pot.bet))
-        return "Raised by {} to {}".format(raise_amount, self.pot.bet)
+        if current_player.ID in bets:
+            bets[current_player.ID].amount += diff
+        else:
+            bets[current_player.ID] = Bet(diff, current_player)
+        print("Pot raised by {} to {}".format(raise_amount, current_player.bet_amount))
+        return "Raised by {} to {}".format(raise_amount, current_player.bet_amount)
 
     def reveal_cards(self, num):
         cards = self.face_down_community_cards[:num]
