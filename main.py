@@ -21,7 +21,7 @@ def main():
  
 def run_lobby(num_players):
 
-    ip_address = socket.gethostbyname(socket.gethostname())
+    ip_address = get_local_ip()
     port = 8080
     
     s = socket.socket()
@@ -46,7 +46,15 @@ def run_lobby(num_players):
     print("all players have joined")
  
     return players
- 
+
+def get_local_ip():
+    # return socket.gethostbyname(socket.gethostname())
+    address_list = socket.gethostbyname_ex(socket.gethostname())[2]
+    ip_addresses = [a for a in address_list if a.startswith("192.168.1.")];
+    if len(ip_addresses) < 1:
+        raise Exception("Could not find an address that looks like a local ip")
+    return ip_addresses[0]
+
 def run_game(players):
  
     game = Game(players)
