@@ -19,12 +19,13 @@ class HandPlayer(Player):
 
 class Pot:
 
-    def __init__(self, amount=0, players=[]):
+    def __init__(self, amount=0, bet=0, players=[]):
         self.amount = amount
+        self.bet = bet
         self.playing_players = players
 
     def __repr__(self):
-        return "Pot({}, {})".format(self.amount, str(self.playing_players))
+        return "Pot({}, {}, {})".format(self.amount, self.bet, self.playing_players)
 
 def deal_hands(deck, num_players):
  
@@ -70,8 +71,7 @@ class Hand():
         self.face_up_community_cards = []
  
         self.start_pos = start_pos
-        self.pot = Pot(0, list(self.all_hand_players))
-        self.max_bet = 0
+        self.pot = Pot(0, 0, list(self.all_hand_players))
 
         print("Hand initiated:", str(self))
 
@@ -154,7 +154,7 @@ class Hand():
             else:
                 player.coms.send_line("You are not the blind")
 
-        self.max_bet = big_blind
+        self.pot.bet = big_blind
         self.pot.amount = big_blind + (small_blind if small_blind_enable else 0)
 
     def deal_hands(self):
@@ -176,10 +176,10 @@ class Hand():
         while True:
             current_player = self.pot.playing_players[current_index]
             if not current_player.folded:
-                available_options = get_players_options(current_player, self.max_bet, has_bet)
+                available_options = get_players_options(current_player, self.pot.bet, has_bet)
                 has_bet.add(current_player.ID)
                 current_player.coms.send_line("current pot: {}\ncurrent pot bet: {}\nyour current bet: {}\nyour holdings: {}" \
-                                              .format(self.pot.amount, self.max_bet, current_player.bet_amount, current_player.holdings))
+                                              .format(self.pot.amount, self.pot.bet, current_player.bet_amount, current_player.holdings))
 
                 while True:
                     current_player.coms.send_line("/".join(available_options))
@@ -218,7 +218,7 @@ class Hand():
 
 
     def call_bet(self, current_player):
-        diff = self.max_bet - current_player.bet_amount
+        diff = self.pot.bet - current_player.bet_amount
         if current_player.holdings < diff:
             raise Exception("not enough money to call")
         current_player.bet(diff)
@@ -230,14 +230,14 @@ class Hand():
         if len(action) != 2:
             raise Exception("there is no amount to raise by")
         raise_amount = int(action[1])
-        diff = (self.max_bet - current_player.bet_amount) + raise_amount
+        diff = (self.pot.bet - current_player.bet_amount) + raise_amount
         if current_player.holdings < diff:
             raise Exception("not enough money to raise by " + str(raise_amount))
         current_player.bet(diff)
         self.pot.amount  += diff
-        self.max_bet += raise_amount
-        print("Pot raised by {} to {}".format(raise_amount, self.max_bet))
-        return "Raised by {} to {}".format(raise_amount, self.max_bet)
+        self.pot.bet += raise_amount
+        print("Pot raised by {} to {}".format(raise_amount, self.pot.bet))
+        return "Raised by {} to {}".format(raise_amount, self.pot.bet)
 
     def reveal_cards(self, num):
         cards = self.face_down_community_cards[:num]
