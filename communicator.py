@@ -21,3 +21,7 @@ class Communicator():
  
     def recv(self, d):
         return self.conn.recv(d).decode("utf8").strip()
+
+    def close(self):
+        self.send_line("Goodbye")
+        self.conn.close()

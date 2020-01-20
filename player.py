@@ -16,4 +16,4 @@ class Player():
         self.holdings += amount
  
     def __repr__(self):
-        return self.name
+        return "{} [{}]".format(self.name, self.holdings)
