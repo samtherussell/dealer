@@ -211,7 +211,7 @@ class Hand():
     def call_bet(self, current_player):
         diff = self.bet - current_player.bet_amount
         if current_player.holdings < diff:
-            raise Exception("cannot call")
+            raise Exception("not enough money to call")
         current_player.bet(diff)
         self.pot += diff
 
