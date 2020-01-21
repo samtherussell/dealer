@@ -1,4 +1,6 @@
 
+from typing import List, Tuple
+
 from player import Player
 from hand_scorer import get_hand_max
 
@@ -25,7 +27,7 @@ class Pot:
         self.playing_players = players
 
     def __repr__(self):
-        return "Pot({}, {}, {})".format(self.amount, self.bet, self.playing_players)
+        return "Pot(amount={}, bet={}, players={})".format(self.amount, self.bet, self.playing_players)
 
 class Bet:
 
@@ -82,6 +84,15 @@ def get_raise_amount(action):
 class OnePlayerLeftException(Exception):
     def __init__(self, player):
         self.player = player
+
+def get_winners(scores: List[Tuple[Player,int]]):
+
+    winning_score = scores[0][1]
+    winners = [scores[0][0]]
+    i = 1
+    while i < len(scores) or scores[i][1] > winning_score:
+        winners.append(scores[i][0])
+    return winners
 
 class Hand():
  
@@ -240,6 +251,8 @@ class Hand():
                             display = self.raise_bet(current_player, action, bets)
                             round_end_index = prevp(current_index)
                             break
+                        elif action == "Money":
+                            current_player.holdings += 50
                         else:
                             raise Exception("Invalid command")
                     except Exception as e:
@@ -252,24 +265,32 @@ class Hand():
                 break
             current_index = nextp(current_index)
 
+        print("bets after round", bets)
         max_raise = bets.max_raise()
         if all([bets[ID].amount == max_raise for ID in bets]):
+            print("all bets the same")
             self.pot.bet += max_raise
             self.pot.amount += bets.total_raise()
         else:
+            print("we have side pots")
             bets = list(bets.values())
             bets.sort(key=lambda x: x.amount)
+            print("bets in order", bets)
             current_pot = self.pots.pop()
             base_pot_amount = current_pot.amount
             prev_pot_bet = current_pot.bet
             while len(bets) > 0:
                 bet = bets[0]
-                new_bet = bet.amount + prev_pot_bet
-                new_pot = base_pot_amount + bet.amount * len(bets)
+                bet_amount = bet.amount
+                new_bet = bet_amount + prev_pot_bet
+                new_pot = base_pot_amount + bet_amount * len(bets)
+                print(bets, base_pot_amount, prev_pot_bet, new_bet, new_pot)
                 self.pots.append(Pot(new_pot, new_bet, [bet.who for bet in bets]))
-                for bet in bets:
-                    bet.amount -= bet.amount
-                bets = [bet for bet in bets if bet.amount <= 0]
+                for b in bets:
+                    b.amount -= bet_amount
+                print("subtracted bets", bets)
+                bets = [bet for bet in bets if bet.amount > 0]
+                print("filtered bets", bets)
                 prev_pot_bet = new_bet
                 base_pot_amount = 0
             self.pot = self.pots[-1]
@@ -330,12 +351,24 @@ class Hand():
             trick_name = score[1][0]
             player.coms.send_line("You got {}".format(trick_name))
 
-        if scores[0][1][1] == scores[1][1][1]:
-            winners = [scores[0][0], scores[1][0]]
-            self.make_draw(winners)
-        else:
-            winner = scores[0][0]
-            self.make_winner(winner)
+        winnings = {player.ID:0 for player in self.all_hand_players}
+        print("pots", self.pots)
+        for pot in self.pots:
+            pot_amount = pot.amount
+            player_ids = [p.ID for p in pot.playing_players]
+            pot_scores = [(p[0],p[1][1]) for p in scores if p[0].ID in player_ids]
+            print("pot_amount", pot_amount, "pot_scores", pot_scores)
+            winners = get_winners(pot_scores)
+            share = pot_amount / len(winners)
+            print("winners", winners, "share", share)
+            for winner in winners:
+                winnings[winner.ID] += share
+        print("winnings", winnings)
+
+        for player in self.all_hand_players:
+            amount = winnings[player.ID]
+            player.coms.send_line("You won {}".format(amount))
+            self.notify_players("{} won {}".format(player.name, amount), exclude=player.ID)
 
     def __repr__(self):
         return "players={}, hands={}, face_up_community_card={}, face_down_community_cards={}, pot={}"\
