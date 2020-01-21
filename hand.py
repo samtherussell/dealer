@@ -33,22 +33,18 @@ class Bet:
         self.amount = amount
         self.who = who
 
+    def __repr__(self):
+        return "<{}~{}>".format(self.who, self.amount)
 class Bets(dict):
 
-    _total_raise = None
-    _max_raise = None
-
     def total_raise(self):
-        if self._total_raise == None:
-            self._total_raise = 0
-            for bet in self:
-                self._total_raise += bet.amount
-        return self._total_raise
+        sum = 0
+        for ID in self:
+            sum += self[ID].amount
+        return sum
 
     def max_raise(self):
-        if self._max_raise == None:
-            self._max_raise = max((bet.amount for bet in self))
-        return self._max_raise
+        return max((self[ID].amount for ID in self)) if len(self) > 0 else 0
 
 
 def deal_hands(deck, num_players):
@@ -205,9 +201,10 @@ class Hand():
         has_bet = set()
         bets = Bets()
 
-        blind_bets = self.assign_blinds()
-        for bet in blind_bets:
-            bets[bet.current_player.ID] = bet
+        if blinds:
+            blind_bets = self.assign_blinds()
+            for bet in blind_bets:
+                bets[bet.who.ID] = bet
 
         current_index = self.start_pos
         round_end_index = prevp(current_index)
@@ -216,8 +213,15 @@ class Hand():
             if not current_player.folded and current_player.has_money():
                 available_options = get_players_options(current_player, self.pot.bet, has_bet)
                 has_bet.add(current_player.ID)
-                current_player.coms.send_line("current pot: {}\ncurrent pot bet: {}\nyour current bet: {}\nyour holdings: {}" \
-                                              .format(self.pot.amount, self.pot.bet, current_player.bet_amount, current_player.holdings))
+                print("bets", bets)
+                current_pot = self.pot.amount + bets.total_raise()
+                current_pot_bet = self.pot.bet + bets.max_raise()
+                current_player_bet = current_player.bet_amount
+                current_player_holdings = current_player.holdings
+                status = "current pot: {}\ncurrent pot bet: {}\nyour current bet: {}\nyour holdings: {}" \
+                    .format(current_pot, current_pot_bet, current_player_bet, current_player_holdings)
+                print(status)
+                current_player.coms.send_line(status)
 
                 while True:
                     current_player.coms.send_line("/".join(available_options))
@@ -243,49 +247,42 @@ class Hand():
 
                 self.notify_players("{} {}".format(current_player.name, display), exclude=current_player.ID)
 
-            if all([bet.amount == bets.max_raise() for bet in bets]):
-                self.pot.bet += bets.max_raise()
-                self.pot.amount += bets.total_raise()
-            else:
-                bets.sort(key=lambda x: x.amount)
-                current_pot = self.pots.pop()
-                base_pot_amount = current_pot.amount
-                prev_pot_bet = current_pot.bet
-                while len(bets) > 0:
-                    bet = bets[0]
-                    new_bet = bet.amount + prev_pot_bet
-                    new_pot = base_pot_amount + new_bet * len(bets)
-                    self.pots.append(Pot(new_pot, new_bet, [bet.who for bet in bets]))
-                    for bet in bets:
-                        bet.amount -= bet.amount
-                    bets = [bet for bet in bets if bet.total_bet <= 0]
-                    prev_pot_bet = new_bet
-                    base_pot_amount = 0
-
-            larger_pot = self.pot
-            smaller_pot_amount = self.prev_pot
-            smaller_pot_bet =
-            smaller_pot_players = larger_pot.playing_players
-            larger_pot_players = list(smaller_pot_players)
-            larger_pot_players.remove(current_player)
-            larger_pot.playing_players = larger_pot_players
-
-            smaller_pot = Pot(self.pot.amount, smaller_pot_bet, )
-
             left_in = [p for p in self.pot.playing_players if not p.folded]
-            if len(left_in) < 2:
-                raise OnePlayerLeftException(left_in[0])
-
-            if current_index == round_end_index:
+            if current_index == round_end_index or len(left_in) < 2:
                 break
             current_index = nextp(current_index)
 
+        max_raise = bets.max_raise()
+        if all([bets[ID].amount == max_raise for ID in bets]):
+            self.pot.bet += max_raise
+            self.pot.amount += bets.total_raise()
+        else:
+            bets = list(bets.values())
+            bets.sort(key=lambda x: x.amount)
+            current_pot = self.pots.pop()
+            base_pot_amount = current_pot.amount
+            prev_pot_bet = current_pot.bet
+            while len(bets) > 0:
+                bet = bets[0]
+                new_bet = bet.amount + prev_pot_bet
+                new_pot = base_pot_amount + bet.amount * len(bets)
+                self.pots.append(Pot(new_pot, new_bet, [bet.who for bet in bets]))
+                for bet in bets:
+                    bet.amount -= bet.amount
+                bets = [bet for bet in bets if bet.amount <= 0]
+                prev_pot_bet = new_bet
+                base_pot_amount = 0
+            self.pot = self.pots[-1]
+
         self.pot.playing_players = [p for p in self.pot.playing_players if not p.folded]
+        if len(self.pot.playing_players) < 2:
+            raise OnePlayerLeftException(self.pot.playing_players[0])
         self.start_pos = self.start_pos % len(self.pot.playing_players)
 
 
     def call_bet(self, current_player, bets):
-        diff = min(self.pot.bet - current_player.bet_amount, current_player.holdings)
+        current_max_bet = self.pot.bet + bets.max_raise()
+        diff = min(current_max_bet - current_player.bet_amount, current_player.holdings)
         current_player.bet(diff)
         if current_player.ID in bets:
             bets[current_player.ID].amount += diff
@@ -295,7 +292,8 @@ class Hand():
 
     def raise_bet(self, current_player, action, bets):
         raise_amount = get_raise_amount(action)
-        diff = (bets.max_bet - current_player.bet_amount) + raise_amount
+        current_max_bet = self.pot.bet + bets.max_raise()
+        diff = (current_max_bet - current_player.bet_amount) + raise_amount
         if current_player.holdings < diff:
             raise Exception("not enough money to raise by " + str(raise_amount))
         current_player.bet(diff)
