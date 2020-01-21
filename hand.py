@@ -1,33 +1,36 @@
-
-from typing import List, Tuple
+from typing import List, Tuple, Set
 
 from player import Player
-from hand_scorer import get_hand_max
+from hand_scorer import get_hand_max, Score
+from card import Card
+
 
 class HandPlayer(Player):
- 
-    def __init__(self, player, hand):
+
+    def __init__(self, player: Player, hand: List[Card]):
         super().__init__(player.ID, player.name, player.coms, player.holdings)
         self.bet_amount = 0
         self.folded = False
         self.hand = hand
- 
-    def bet(self, amount):
+
+    def bet(self, amount: int):
         super().bet(amount)
         self.bet_amount += amount
- 
+
     def fold(self):
         self.folded = True
 
+
 class Pot:
 
-    def __init__(self, amount=0, bet=0, players=[]):
+    def __init__(self, amount: int, bet: int, players: List[HandPlayer]):
         self.amount = amount
         self.bet = bet
         self.playing_players = players
 
     def __repr__(self):
         return "Pot(amount={}, bet={}, players={})".format(self.amount, self.bet, self.playing_players)
+
 
 class Bet:
 
@@ -36,77 +39,82 @@ class Bet:
         self.who = who
 
     def __repr__(self):
-        return "<{}~{}>".format(self.who, self.amount)
+        return "Bet(who={}, amount={})".format(self.who, self.amount)
+
+
 class Bets(dict):
 
     def total_raise(self):
-        sum = 0
+        total = 0
         for ID in self:
-            sum += self[ID].amount
-        return sum
+            total += self[ID].amount
+        return total
 
     def max_raise(self):
         return max((self[ID].amount for ID in self)) if len(self) > 0 else 0
 
 
-def deal_hands(deck, num_players):
- 
+def deal_hands(deck, num_players: int) -> List[List[Card]]:
     hands = [[] for _ in range(num_players)]
- 
+
     for i in range(2):
         for p in range(num_players):
             hands[p].append(deck.pop())
-   
+
     return hands
- 
-def deal_comm_cards(deck, discard):
- 
-    comm_cards = []
+
+
+def deal_comm_cards(deck: List[Card], discard: List[Card]) -> List[Card]:
+    comm_cards: List[Card] = []
     deal_order = [discard, comm_cards, comm_cards, comm_cards, discard, comm_cards, discard, comm_cards]
     for pile in deal_order:
         pile.append(deck.pop())
-       
+
     return comm_cards
 
-def get_players_options(current_player, current_bet, has_bet):
+
+def get_players_options(current_player: HandPlayer, current_bet: int, has_bet: Set[int]) -> List[str]:
     options = ["Fold", "Call"]
     diff = current_bet - current_player.bet_amount
     if current_player.ID not in has_bet and current_player.holdings > diff:
         options.append("Raise")
     return options
 
-def get_raise_amount(action):
+
+def get_raise_amount(action: str) -> int:
     action = action.split(" ")
     if len(action) != 2:
         raise Exception("there is no amount to raise by")
     return int(action[1])
 
+
 class OnePlayerLeftException(Exception):
-    def __init__(self, player):
+    def __init__(self, player: Player):
         self.player = player
 
-def get_winners(scores: List[Tuple[Player,int]]):
 
-    winning_score = scores[0][1]
-    winners = [scores[0][0]]
+def get_winners(scores: List[Tuple[Player, int]]):
+    winning_score: int = scores[0][1]
+    winners: List[Player] = [scores[0][0]]
     i = 1
     while i < len(scores) or scores[i][1] > winning_score:
         winners.append(scores[i][0])
     return winners
 
-class Hand():
- 
-    def __init__(self, players, deck, start_pos):
- 
+
+class Hand:
+
+    def __init__(self, players: List[Player], deck: List[Card], start_pos: int):
+
         self.deck = deck
         self.all_players = players
-         
-        self.discard = []
+
+        self.discard: List[Card] = []
         self.hands = deal_hands(self.deck, len(players))
-        self.all_hand_players = [HandPlayer(p, h) for p,h in zip(players, self.hands)]
+        self.all_hand_players = [HandPlayer(p, h) for p, h in zip(players, self.hands)]
         self.face_down_community_cards = deal_comm_cards(self.deck, self.discard)
         self.face_up_community_cards = []
- 
+
         self.start_pos = start_pos
         self.pot = Pot(0, 0, list(self.all_hand_players))
         self.pots = [self.pot]
@@ -141,7 +149,7 @@ class Hand():
         self.update_player_holdings()
 
     def update_player_holdings(self):
-        for player,hand_player in zip(self.all_players, self.all_hand_players):
+        for player, hand_player in zip(self.all_players, self.all_hand_players):
             player.holdings = hand_player.holdings
             print(player.holdings)
 
@@ -154,15 +162,15 @@ class Hand():
     def make_draw(self, winners):
         print("winner:s", winners)
         for winner in winners:
-            winner.win(self.pot.amount/2)
-            winner.coms.send_line("YOU DRAW\nWinnings: {}".format(self.pot.amount/2 - winner.bet_amount))
+            winner.win(self.pot.amount / 2)
+            winner.coms.send_line("YOU DRAW\nWinnings: {}".format(self.pot.amount / 2 - winner.bet_amount))
         self.notify_players("YOU LOSE", exclude=[w.ID for w in winners])
 
     def notify_players(self, s, exclude=None):
         for player in self.pot.playing_players:
             if exclude is None \
-              or type(exclude) == int and player.ID is not exclude \
-              or type(exclude) == list and player.ID not in exclude:
+                    or type(exclude) == int and player.ID is not exclude \
+                    or type(exclude) == list and player.ID not in exclude:
                 player.coms.send_line(s)
 
     def notify_player_statuses(self):
@@ -182,12 +190,12 @@ class Hand():
         self.notify_players("small blind is {}".format(small_blind) if small_blind_enable else "no small blind")
 
         bets = []
-        for i,player in enumerate(self.pot.playing_players):
-            if i == (self.start_pos-1) % len(self.pot.playing_players):
+        for i, player in enumerate(self.pot.playing_players):
+            if i == (self.start_pos - 1) % len(self.pot.playing_players):
                 player.bet(big_blind)
                 player.coms.send_line("You are big blind")
                 bets.append(Bet(big_blind, player))
-            elif small_blind_enable and i == (self.start_pos-2) % len(self.pot.playing_players):
+            elif small_blind_enable and i == (self.start_pos - 2) % len(self.pot.playing_players):
                 player.bet(small_blind)
                 player.coms.send_line("You are small blind")
                 bets.append(Bet(small_blind, player))
@@ -221,7 +229,7 @@ class Hand():
         round_end_index = prevp(current_index)
         while True:
             current_player = self.pot.playing_players[current_index]
-            if not current_player.folded and current_player.has_money():
+            if current_player.folded and current_player.has_money():
                 available_options = get_players_options(current_player, self.pot.bet, has_bet)
                 has_bet.add(current_player.ID)
                 print("bets", bets)
@@ -300,7 +308,6 @@ class Hand():
             raise OnePlayerLeftException(self.pot.playing_players[0])
         self.start_pos = self.start_pos % len(self.pot.playing_players)
 
-
     def call_bet(self, current_player, bets):
         current_max_bet = self.pot.bet + bets.max_raise()
         diff = min(current_max_bet - current_player.bet_amount, current_player.holdings)
@@ -336,27 +343,30 @@ class Hand():
 
     def decide_winner(self):
 
-        scores = [(player, get_hand_max(player.hand + self.face_up_community_cards)) for player in self.pot.playing_players]
+        def score_player_hand(player: HandPlayer) -> Tuple[HandPlayer, Score]:
+            return player, get_hand_max(player.hand + self.face_up_community_cards)
+
+        scores = [score_player_hand(player) for player in self.pot.playing_players]
         scores.sort(key=lambda x: x[1][1], reverse=True)
 
         print("scores:", scores)
 
         for score in scores:
             player = score[0]
-            trick_name = score[1][0]
+            trick_name = score[1].trick_name
             self.notify_players("{} got {}".format(player.name, trick_name), exclude=player.ID)
 
         for score in scores:
             player = score[0]
-            trick_name = score[1][0]
+            trick_name = score[1].trick_name
             player.coms.send_line("You got {}".format(trick_name))
 
-        winnings = {player.ID:0 for player in self.all_hand_players}
+        winnings = {player.ID: 0 for player in self.all_hand_players}
         print("pots", self.pots)
         for pot in self.pots:
             pot_amount = pot.amount
             player_ids = [p.ID for p in pot.playing_players]
-            pot_scores = [(p[0],p[1][1]) for p in scores if p[0].ID in player_ids]
+            pot_scores = [(p[0], p[1].value) for p in scores if p[0].ID in player_ids]
             print("pot_amount", pot_amount, "pot_scores", pot_scores)
             winners = get_winners(pot_scores)
             share = pot_amount / len(winners)
@@ -371,5 +381,6 @@ class Hand():
             self.notify_players("{} won {}".format(player.name, amount), exclude=player.ID)
 
     def __repr__(self):
-        return "players={}, hands={}, face_up_community_card={}, face_down_community_cards={}, pot={}"\
-               .format(self.pot.playing_players, self.hands, self.face_up_community_cards, self.face_down_community_cards, self.pot.amount)
+        return "players={}, hands={}, face_up_community_card={}, face_down_community_cards={}, pot={}" \
+            .format(self.pot.playing_players, self.hands, self.face_up_community_cards,
+                    self.face_down_community_cards, self.pot.amount)

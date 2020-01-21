@@ -1,19 +1,14 @@
 import random
+from typing import List
 
 from hand import Hand
+from player import Player
+from card import Card
 
-class Card():
+
+class Game:
  
-    def __init__(self, code, name):
-        self.code = code
-        self.name = name
- 
-    def __repr__(self):
-        return "{} [{}]".format(self.name, self.code)
- 
-class Game():
- 
-    def __init__(self, players):
+    def __init__(self, players: List[Player]):
  
         self.players_still_in = list(players)
  
@@ -26,8 +21,7 @@ class Game():
         self.start_pos = 0
 
         print("new game started")
- 
-       
+
     def finished(self):
         return len(self.players_still_in) < 2
  

@@ -4,7 +4,8 @@ import socket
 from game import Game
 from player import Player
 from communicator import Communicator 
- 
+
+
 def main():
 
     while True:    
@@ -14,26 +15,26 @@ def main():
         print("must have more than one player")
 
     players = run_lobby(num_players)
- 
+
     print("players:", players)
- 
+
     run_game(players)
- 
-def run_lobby(num_players):
+
+
+def run_lobby(num_players: int):
 
     ip_address = get_local_ip()
     port = 8080
-    
+
     s = socket.socket()
     s.bind((ip_address, port))
     s.listen()
 
     print("dealer is listening at {} on port {}".format(ip_address, port))
- 
+
     players = []
- 
     for i in range(num_players):
-        conn, addr = s.accept()
+        conn, _ = s.accept()
         coms = Communicator(conn)
         welcome = "Welcome to the poker lobby. You are player {} of {}. Please enter name: ".format(i+1, num_players)
         coms.send(welcome)
@@ -47,19 +48,21 @@ def run_lobby(num_players):
  
     return players
 
-def get_local_ip():
-    # return socket.gethostbyname(socket.gethostname())
+
+def get_local_ip() -> str:
     address_list = socket.gethostbyname_ex(socket.gethostname())[2]
-    ip_addresses = [a for a in address_list if a.startswith("192.168.1.")];
+    ip_addresses = [a for a in address_list if a.startswith("192.168.1.")]
     if len(ip_addresses) < 1:
         raise Exception("Could not find an address that looks like a local ip")
     return ip_addresses[0]
 
+
 def run_game(players):
- 
+
     game = Game(players)
     while not game.finished():
         game.run_hand()
-       
+
+
 if __name__ == "__main__":
     main()

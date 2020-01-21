@@ -1,21 +1,33 @@
 from itertools import permutations
+from typing import List, Dict
 
-CARD_NUMS = { str(i+1):i for i in range(13)}
-CARD_SUITS = dict(enumerate(["spades", "hearts", "clubs", "diamonds"]))
+from card import Card
 
-def get_hand_max(cards):
+CARD_NUMS = {str(i+1): i for i in range(13)}
+CARD_SUITS: Dict[int, str] = dict(enumerate(["spades", "hearts", "clubs", "diamonds"]))
+
+
+class Score:
+
+    def __init__(self, trick_name: str, value: int):
+        self.trick_name = trick_name
+        self.value = value
+
+
+def get_hand_max(cards: List[Card]) -> Score:
     if len(cards) != 7:
         raise Exception("there should be 7 cards")
-    return max([get_cards_max(cards) for cards in combos(cards)], key=lambda x: x[1])
+    return max([get_cards_max(cards) for cards in combos(cards)], key=lambda x: x.value)
 
-def get_cards_max(cards):
+
+def get_cards_max(cards: List[Card]) -> Score:
     if len(cards) != 5:
         raise Exception("there should be 5 cards")
     card_codes = [c.code for c in cards]
     card_names = ", ".join([c.name for c in cards])
-    
-    def result(trick_name, trick_ranking):
-        return trick_name + ": " + card_names, score(card_codes, trick_ranking)
+
+    def result(trick_name: str, trick_ranking: int) -> Score:
+        return Score(trick_name + ": " + card_names, score(card_codes, trick_ranking))
 
     if is_royal_flush(card_codes):
         return result("Royal flush", 9)
@@ -36,24 +48,30 @@ def get_cards_max(cards):
     elif is_n_of_a_kind(card_codes, 2):
         return result("One pair", 1)
     else:
-        return result("High card", 0)
+        return result("High card.py", 0)
 
-def score(cards, trick_ranking):
+
+def score(cards: List[int], trick_ranking: int) -> int:
     return trick_ranking * 13 + (0 if cards is None else high_card(cards))
 
-def high_card(cards):
+
+def high_card(cards: List[int]):
     return max(get_numbers(cards))
 
-def combos(cards):
+
+def combos(cards: List[Card]):
     return permutations(cards, 5)
 
-def is_royal_flush(cards):
-     return is_flush(cards) and contains(cards, ['1', '13', '12', '11', '10'])
 
-def is_straight_flush(cards):
+def is_royal_flush(cards: List[int]):
+    return is_flush(cards) and contains(cards, ['1', '13', '12', '11', '10'])
+
+
+def is_straight_flush(cards: List[int]):
     return is_flush(cards) and is_straight(cards)
-    
-def is_straight(cards):
+
+
+def is_straight(cards: List[int]):
     if len(cards) < 2:
         raise Exception("you probably didn't want to call this")
     numbers = get_numbers(cards)
@@ -66,23 +84,28 @@ def is_straight(cards):
         prev = card
     return True
 
-def is_full_house(cards):
+
+def is_full_house(cards: List[int]):
     return len(set(cards)) == 2
 
-def is_two_pair(cards):
+
+def is_two_pair(cards: List[int]):
     return len(set(cards)) == 3
 
-def is_n_of_a_kind(cards, n):
+
+def is_n_of_a_kind(cards: List[int], n):
     numbers = get_numbers(cards)
     for num in reversed(range(13)):
-        if is_n_of_an_X(numbers, n, num):
+        if is_n_of_an_x(numbers, n, num):
             return True
     return False
 
-def is_n_of_an_X(numbers, n, x):
+
+def is_n_of_an_x(numbers, n, x):
     return numbers.count(x) >= n
 
-def contains(cards, card_nums):
+
+def contains(cards: List[int], card_nums):
     numbers = get_numbers(cards)
 
     for num in card_nums:
@@ -90,10 +113,12 @@ def contains(cards, card_nums):
             return False
     return True
 
-def is_flush(cards):
+
+def is_flush(cards: List[int]):
     return all_same([get_suit(card) for card in cards])
 
-def all_same(seq):
+
+def all_same(seq: List):
     if len(seq) < 1:
         return True
     for x in seq:
@@ -101,11 +126,14 @@ def all_same(seq):
             return False
     return True
 
-def get_numbers(cards):
+
+def get_numbers(cards: List[int]):
     return [get_number(card) for card in cards]
 
-def get_suit(card):
+
+def get_suit(card: int):
     return card // 13
 
-def get_number(card):
+
+def get_number(card: int):
     return card % 13

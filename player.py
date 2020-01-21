@@ -1,6 +1,9 @@
-class Player():
+from communicator import Communicator
+
+
+class Player:
  
-    def __init__(self, ID, name, coms, holdings=100):
+    def __init__(self, ID: int, name, coms: Communicator, holdings=100):
         self.ID = ID
         self.name = name
         self.coms = coms
@@ -14,6 +17,9 @@ class Player():
  
     def win(self, amount):
         self.holdings += amount
- 
+
+    def __eq__(self, other):
+        return self.ID == self.ID
+
     def __repr__(self):
-        return "{} [{}]".format(self.name, self.holdings)
+        return "{} with {} left".format(self.name, self.holdings)
