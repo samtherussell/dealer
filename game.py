@@ -45,3 +45,12 @@ class Game:
             if player.has_money():
                 self.start_pos = x
                 break
+
+    def congratulate_winner(self):
+        if len(self.players_still_in) > 1:
+            print("no-one has won yet")
+        else:
+            winner_coms = self.players_still_in[0].coms
+            winner_coms.send_line("YOU ARE THE CHAMPION")
+            winner_coms.close()
+

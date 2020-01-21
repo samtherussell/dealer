@@ -13,6 +13,8 @@ class Score:
         self.trick_name = trick_name
         self.value = value
 
+    def __repr__(self):
+        return "{} [{}]".format(self.trick_name, self.value)
 
 def get_hand_max(cards: List[Card]) -> Score:
     if len(cards) != 7:
@@ -48,7 +50,7 @@ def get_cards_max(cards: List[Card]) -> Score:
     elif is_n_of_a_kind(card_codes, 2):
         return result("One pair", 1)
     else:
-        return result("High card.py", 0)
+        return result("High card", 0)
 
 
 def score(cards: List[int], trick_ranking: int) -> int:
