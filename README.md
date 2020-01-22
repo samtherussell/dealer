@@ -1,5 +1,5 @@
-# dealer
-Poker Dealer Server
+# Poker
+Poker Dealer Server and "AI" player
 
 ### Usage:
 Use netcat to connect
