@@ -159,8 +159,15 @@ class Hand:
                 player.coms.send_line(s)
 
     def notify_player_statuses(self):
-        for player in self.top_pot.playing_players:
-            player.coms.send_line("Money left: {}".format(player.holdings))
+
+        self.notify_players("The following players are still in: " + ", ".join([p.name for p in self.all_hand_players]))
+
+        for player in self.all_hand_players:
+            player.coms.send_line("Money left")
+
+        for player in self.all_hand_players:
+            player.coms.send_line("You: {}".format(player.holdings))
+            self.notify_players("{}: {}".format(player.name, player.holdings), exclude=player.ID)
 
     def get_blinds(self, small_blind=5, big_blind=10) -> List[Bet]:
         if self.start_pos > len(self.top_pot.playing_players):
@@ -171,8 +178,8 @@ class Hand:
 
         small_blind_enable = len(self.top_pot.playing_players) > 2
 
-        self.notify_players("big blind is {}".format(big_blind))
-        self.notify_players("small blind is {}".format(small_blind) if small_blind_enable else "no small blind")
+        self.notify_players("Big blind is {}".format(big_blind))
+        self.notify_players("Small blind is {}".format(small_blind if small_blind_enable else 0))
 
         bets = []
         for i, player in enumerate(self.top_pot.playing_players):
@@ -245,7 +252,7 @@ class Hand:
         current_pot_bet = self.top_pot.bet + bets.max_raise()
         current_player_bet = current_player.bet_amount
         current_player_holdings = current_player.holdings
-        status = "current pot: {}\ncurrent pot bet: {}\nyour current bet: {}\nyour holdings: {}" \
+        status = "Current pot: {}\nCurrent pot bet: {}\nYour current bet: {}\nYour holdings: {}" \
             .format(current_pot, current_pot_bet, current_player_bet, current_player_holdings)
         return status
 
@@ -368,7 +375,7 @@ class Hand:
             player_ids = [p.ID for p in pot.playing_players]
             pot_scores = [(p[0], p[1].value) for p in scores if p[0].ID in player_ids]
             winners = get_winners(pot_scores)
-            share = pot_amount / len(winners)
+            share = int(pot_amount / len(winners))
             self.notify_players("{} win {} bet pot worth {} giving {} each"
                                 .format(", ".join((w.name for w in winners)), pot.bet, pot.amount, share))
             for winner in winners:
