@@ -93,7 +93,7 @@ def is_straight_flush(cards: List[Card]) -> Union[Tuple[bool, str, int], Tuple[b
 
 
 def is_4_of_a_kind(cards: List[Card]) -> Union[Tuple[bool, str, int], Tuple[bool, None, None]]:
-    match, trick_cards = is_n_of_a_kind(cards, 3)
+    match, trick_cards = is_n_of_a_kind(cards, 4)
     if match:
         return True, trick_str("4 of a kind", trick_cards), get_score(7, trick_cards)
     else:
