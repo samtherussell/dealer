@@ -290,7 +290,8 @@ class Hand:
         self.notify_players("{} {}".format(current_player.name, display), exclude=current_player.ID)
         return reset_round_end_index
 
-    def run_player_action(self, available_options: List[str], bets: Bets, current_player: HandPlayer, action: str):
+    def run_player_action(self, available_options: List[str], bets: Bets, current_player: HandPlayer, action: str) \
+            -> Tuple[str, bool]:
 
         if action == "Fold":
             current_player.fold()
@@ -344,7 +345,8 @@ class Hand:
         def score_player_hand(player: HandPlayer) -> Tuple[HandPlayer, Score]:
             return player, get_hand_max(player.hand + self.face_up_community_cards)
 
-        scores: List[Tuple[HandPlayer, Score]] = [score_player_hand(player) for player in self.top_pot.playing_players]
+        scores: List[Tuple[HandPlayer, Score]] = [score_player_hand(player) for player in self.all_hand_players \
+                                                  if not player.folded]
         scores.sort(key=lambda x: x[1].value, reverse=True)
 
         print("scores:", scores)
