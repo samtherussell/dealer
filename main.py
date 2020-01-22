@@ -9,7 +9,7 @@ from communicator import Communicator
 def main():
 
     while True:    
-        num_players = 4 # int(input("# players: "))
+        num_players = int(input("# players: "))
         if num_players > 1:
             break
         print("must have more than one player")
@@ -33,13 +33,12 @@ def run_lobby(num_players: int):
     print("dealer is listening at {} on port {}".format(ip_address, port))
 
     players = []
-    names = ["a", "b", "c", "d", "e"]
     for i in range(num_players):
         conn, _ = s.accept()
         coms = Communicator(conn)
         welcome = "Welcome to the poker lobby. You are player {} of {}. Please enter name: ".format(i+1, num_players)
         coms.send(welcome)
-        name = names[i] # coms.recv(20)
+        name = coms.recv(20)
         wait = "Hi %s, please wait to be dealt your hand\n"%(name)
         coms.send(wait)
         print(name, "has joined the game")        
