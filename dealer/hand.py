@@ -217,7 +217,7 @@ class Hand:
 
         current_index: int = self.start_pos
         round_end_index = self.prev(current_index)
-        while True:
+        while len([p for p in self.top_pot.playing_players if not p.folded]) > 1:
             current_player = self.top_pot.playing_players[current_index]
             if current_player.folded:
                 current_player.coms.send_line("You have folded so cannot bet")
