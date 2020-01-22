@@ -1,5 +1,5 @@
 from itertools import permutations
-from typing import List, Dict
+from typing import List, Dict, Tuple, Union
 
 from card import Card
 
@@ -28,29 +28,38 @@ def get_cards_max(cards: List[Card]) -> Score:
     card_codes = [c.code for c in cards]
     card_names = ", ".join([c.name for c in cards])
 
-    def result(trick_name: str, trick_ranking: int) -> Score:
-        return Score(trick_name + ": " + card_names, score(card_codes, trick_ranking))
+    def result(trick_name: str, trick_card_codes: List[int], trick_ranking: int) -> Score:
+        return Score(trick_name + ": " + card_names, score(trick_card_codes, trick_ranking))
 
-    if is_royal_flush(card_codes):
-        return result("Royal flush", 9)
-    elif is_straight_flush(card_codes):
-        return result("Straight flush", 8)
-    elif is_n_of_a_kind(card_codes, 4):
-        return result("4 of a kind", 7)
-    elif is_full_house(card_codes):
-        return result("Full house", 6)
-    elif is_flush(card_codes):
-        return result("Flush", 5)
-    elif is_straight(card_codes):
-        return result("Straight", 4)
-    elif is_n_of_a_kind(card_codes, 3):
-        return result("3 of a kind", 3)
-    elif is_two_pair(card_codes):
-        return result("Two pairs", 2)
-    elif is_n_of_a_kind(card_codes, 2):
-        return result("One pair", 1)
+    match, trick_cards = is_royal_flush(card_codes)
+    if match:
+        return result("Royal flush", trick_cards, 9)
+    match, trick_cards = is_straight_flush(card_codes)
+    if match:
+        return result("Straight flush", trick_cards, 8)
+    match, trick_cards = is_n_of_a_kind(card_codes, 4)
+    if match:
+        return result("4 of a kind", trick_cards, 7)
+    match, trick_cards = is_full_house(card_codes)
+    if match:
+        return result("Full house", trick_cards, 6)
+    match, trick_cards = is_flush(card_codes)
+    if match:
+        return result("Flush", trick_cards, 5)
+    match, trick_cards = is_straight(card_codes)
+    if match:
+        return result("Straight", trick_cards, 4)
+    match, trick_cards = is_n_of_a_kind(card_codes, 3)
+    if match:
+        return result("3 of a kind", trick_cards, 3)
+    match, trick_cards = is_two_pair(card_codes)
+    if match:
+        return result("Two pairs", trick_cards, 2)
+    match, trick_cards = is_n_of_a_kind(card_codes, 2)
+    if match:
+        return result("One pair", trick_cards, 1)
     else:
-        return result("High card", 0)
+        return result("High card", trick_cards, 0)
 
 
 def score(cards: List[int], trick_ranking: int) -> int:
@@ -65,15 +74,15 @@ def combos(cards: List[Card]):
     return permutations(cards, 5)
 
 
-def is_royal_flush(cards: List[int]):
-    return is_flush(cards) and contains(cards, ['1', '13', '12', '11', '10'])
+def is_royal_flush(cards: List[int]) -> Tuple[bool, List[int]]:
+    return is_flush(cards) and contains(cards, ['1', '13', '12', '11', '10']), cards
 
 
-def is_straight_flush(cards: List[int]):
-    return is_flush(cards) and is_straight(cards)
+def is_straight_flush(cards: List[int]) -> Tuple[bool, List[int]]:
+    return is_flush(cards) and is_straight(cards), cards
 
 
-def is_straight(cards: List[int]):
+def is_straight(cards: List[int]) -> Tuple[bool, Union[List[int], None]]:
     if len(cards) < 2:
         raise Exception("you probably didn't want to call this")
     numbers = get_numbers(cards)
@@ -82,32 +91,41 @@ def is_straight(cards: List[int]):
     cards = cards[1:]
     for card in cards:
         if card != prev + 1:
-            return False
+            return False, None
         prev = card
-    return True
+    return True, cards
 
 
-def is_full_house(cards: List[int]):
-    return len(set(cards)) == 2
+def is_full_house(cards: List[int]) -> Tuple[bool, List[int]]:
+    return len(set(cards)) == 2, cards
 
 
-def is_two_pair(cards: List[int]):
-    return len(set(cards)) == 3
+def is_two_pair(cards: List[int]) -> Tuple[bool, Union[List[int], None]]:
+    uniques = set(cards)
+    match = len(uniques) == 3
+    if match:
+        return True, [card for card in uniques if cards.count(card) == 2]
+    else:
+        return False, None
 
 
-def is_n_of_a_kind(cards: List[int], n):
+def is_n_of_a_kind(cards: List[int], n) -> Tuple[bool, Union[List[int], None]]:
     numbers = get_numbers(cards)
     for num in reversed(range(13)):
-        if is_n_of_an_x(numbers, n, num):
-            return True
-    return False
+        match, trick_cards = is_n_of_an_x(numbers, n, num)
+        if match:
+            return True, trick_cards
+    return False, None
 
 
-def is_n_of_an_x(numbers, n, x):
-    return numbers.count(x) >= n
+def is_n_of_an_x(numbers, n, x) -> Tuple[bool, Union[List[int], None]]:
+    if numbers.count(x) >= n:
+        return True, [x for _ in range(n)]
+    else:
+        return False, None
 
 
-def contains(cards: List[int], card_nums):
+def contains(cards: List[int], card_nums) -> bool:
     numbers = get_numbers(cards)
 
     for num in card_nums:
@@ -116,11 +134,11 @@ def contains(cards: List[int], card_nums):
     return True
 
 
-def is_flush(cards: List[int]):
+def is_flush(cards: List[int]) -> bool:
     return all_same([get_suit(card) for card in cards])
 
 
-def all_same(seq: List):
+def all_same(seq: List) -> bool:
     if len(seq) < 1:
         return True
     for x in seq:
@@ -129,13 +147,13 @@ def all_same(seq: List):
     return True
 
 
-def get_numbers(cards: List[int]):
+def get_numbers(cards: List[int]) -> List[int]:
     return [get_number(card) for card in cards]
 
 
-def get_suit(card: int):
+def get_suit(card: int) -> int:
     return card // 13
 
 
-def get_number(card: int):
+def get_number(card: int) -> int:
     return card % 13
