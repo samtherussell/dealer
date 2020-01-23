@@ -1,9 +1,9 @@
 from typing import List
-from card import Card
+from cards import Card
 
 
 def format_cards(cards: List[Card]) -> str:
-    # return " ".join(["{:02d}".format(card.py.code) for card.py in cards])
+    # return " ".join(["{:02d}".format(cards.py.code) for cards.py in cards])
     return ", ".join([card.name for card in cards])
 
 

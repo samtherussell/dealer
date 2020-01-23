@@ -3,7 +3,7 @@ from typing import List
 
 from hand import Hand
 from player import Player
-from card import Card
+from cards import Card, deck
 
 
 class Game:
@@ -12,10 +12,7 @@ class Game:
  
         self.players_still_in = list(players)
  
-        suits = ["spades", "hearts", "clubs", "diamonds"]
-        numbers = ['Ace'] + [str(n) for n in range(2, 11)] + ['Jack', 'Queen', 'King']
-        deck = [number + " of " + suit for suit in suits for number in numbers]
-        self.deck = [Card(*c) for c in enumerate(deck)]
+        self.deck = list(deck)
         random.shuffle(self.deck)
         
         self.start_pos = 0

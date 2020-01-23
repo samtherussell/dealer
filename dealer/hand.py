@@ -2,7 +2,7 @@ from typing import List, Tuple, Set
 
 from player import Player
 from hand_scorer import get_hand_max, Score
-from card import Card
+from cards import Card
 
 
 class HandPlayer(Player):
@@ -202,7 +202,11 @@ class Hand:
         print("dealt hands")
 
     def mod(self, index: int) -> int:
-        return index % len(self.top_pot.playing_players)
+        x = len(self.top_pot.playing_players)
+        if x == 0:
+            return 0
+        else:
+            return index % x
 
     def prev(self, index: int) -> int:
         return self.mod(index - 1)
@@ -225,6 +229,7 @@ class Hand:
         current_index: int = self.start_pos
         round_end_index = self.prev(current_index)
         while len([p for p in self.top_pot.playing_players if not p.folded]) > 1:
+            print("----HERE-----", self.top_pot.playing_players, current_index)
             current_player = self.top_pot.playing_players[current_index]
             if current_player.folded:
                 current_player.coms.send_line("You have folded so cannot bet")
@@ -290,11 +295,12 @@ class Hand:
 
             try:
                 display, reset_round_end_index = self.run_player_action(available_options, bets, current_player, action)
+                current_player.coms.send_line("SUCCESS")
                 break
             except Exception as e:
-                current_player.coms.send_line(str(e))
+                current_player.coms.send_line("ERROR: {}".format(e))
 
-        self.notify_players("{} {}".format(current_player.name, display), exclude=current_player.ID)
+        self.notify_players("Opponent action: {} {}".format(current_player.name, display), exclude=current_player.ID)
         return reset_round_end_index
 
     def run_player_action(self, available_options: List[str], bets: Bets, current_player: HandPlayer, action: str) \

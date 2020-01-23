@@ -5,12 +5,13 @@ from base_player import PokerPlayer
 class RandomPokerPlayer(PokerPlayer):
 
     def decide_action(self, game_status, raise_available=True):
-        options = [lambda: "Fold", lambda: "Call", lambda: "Raise",int(random.random() * 100)]
+        print("Current state:", str(game_status))
+        options = [lambda: "Fold", lambda: "Call", lambda: ("Raise",random.randint(1, 100))]
         if raise_available:
-            return options[random.randint(0, 2)]()
+            result = options[random.randint(0, 2)]()
         else:
-            return options[random.random(0, 1)]()
-
+            result = options[random.randint(0, 1)]()
+        return result
 
 def main():
     player = RandomPokerPlayer()

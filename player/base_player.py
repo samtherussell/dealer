@@ -1,6 +1,9 @@
 import socket
-
+import random
 from abc import ABC, abstractmethod
+from typing import Dict, Tuple, List
+
+from cards import Card, card_name_lookup
 
 
 def get_local_ip() -> str:
@@ -13,30 +16,41 @@ def get_local_ip() -> str:
 
 class PokerPlayerCommunicator:
 
-    def __init__(self):
+    __slots__ = ["_socket", "_lines_buffer", "_line_buffer", "verbose"]
+
+    def __init__(self, verbose=False):
         self._socket = None
         self._lines_buffer = []
         self._line_buffer = ""
+        self.verbose = verbose
 
     def connect(self, ip_address=None, port=8080):
         if ip_address is None:
             ip_address = get_local_ip()
         self._socket = socket.socket()
         self._socket.connect((ip_address, port))
+        if self.verbose:
+            print("Connected to {}:{}".format(ip_address, port))
 
     def read(self):
         if self._socket is None:
             raise Exception("Need to connect before calling read")
-        return self._socket.recv(100).decode("utf8")
+        result = self._socket.recv(100).decode("utf8")
+        if result == "":
+            raise Exception("Connection is closed")
+        if self.verbose:
+            print("Received:", result, end="")
+        return result
 
     def send(self, string: str) -> None:
         if self._socket is None:
             raise Exception("Need to connect before calling send")
-        print("SENDING: " + string, end="")
+        if self.verbose:
+            print("Sending:", string, end="")
         self._socket.send(string.encode("utf8"))
 
     def read_line(self) -> str:
-        if len(self._lines_buffer) == 0:
+        while len(self._lines_buffer) == 0:
             lines = self.read()
             lines = lines.split("\n")
             if len(lines) > 1:
@@ -54,43 +68,140 @@ class PokerPlayerCommunicator:
         self.send(string + "\n")
 
 
+class Player:
+
+    __slots__ = ["name", "holdings", "folded", "actions", "bet"]
+
+    def __init__(self, name):
+        self.name: str = name
+        self.holdings: int = 0
+        self.folded: bool = False
+        self.actions: List[List[Tuple]] = [[]]
+        self.bet: int = 0
+
+    def __repr__(self):
+        return f"Name: {self.name}, Bet: {self.bet}, Holdings: {self.holdings}, Folded: {self.folded}, " + \
+               f"Actions: {self.actions}"
+
+
 class GameStatus:
 
-    def __init__(self):
-        self.internal = dict()
-        self.previous_actions = []
+    __slots__ = ["internal", "you", "players", "hand", "community_cards", "pot_amount", "pot_bet", "your_bet"]
+
+    def __init__(self, name):
+        self.internal: Dict = dict()
+        self.you: Player = Player(name)
+        self.players: Dict[str, Player] = {}
+        self.hand: List[Card] = []
+        self.community_cards: List[Card] = []
+        self.pot_amount: int = 0
+        self.pot_bet: int = 0
+        self.your_bet: int = 0
+
+    def __repr__(self):
+        return f"You: {self.you}, Others: {self.players}, " + \
+            f"Hand: {self.hand}, Com Cards: {self.community_cards}, Pot amount: {self.pot_amount}, " + \
+               f"Pot bet: {self.pot_bet}, Your bet: {self.your_bet}, Internal State: {self.internal}"
 
 
 class PokerPlayer(ABC):
-    _player_num = 1
 
     def __init__(self, player_name=None):
         if player_name is None:
-            self.player_name = "player " + str(PokerPlayer._player_num)
-            PokerPlayer._player_num += 1
+            self.player_name = "player_" + str(random.randint(0, 10000))
         else:
             self.player_name = player_name
-        self.coms = PokerPlayerCommunicator()
+        self.coms = PokerPlayerCommunicator(verbose=True)
         self.coms.connect()
-        self.game_status = GameStatus()
+        self.game_status = GameStatus(self.player_name)
 
     def play(self):
         self.coms.read()  # what is your name
         self.coms.send_line(self.player_name)
         self.coms.read()  # welcome
         while True:
-            response = self.coms.read_line()
-            print(response)
-            if response == "Goodbye": # Game over
+            line = self.coms.read_line()
+            if line == "Goodbye":  # Game over
                 break
-            elif response.startswith("Fold/Call"):
-                action = self.decide_action(self.game_status, raise_available="Raise" in response)
-                self.game_status.previous_actions.append(action)
-                if type(action) is tuple:
-                    action = " ".join((str(i) for i in action))
-                elif not type(action) is str:
-                    action = str(action)
-                self.coms.send_line(action)
+            elif line.startswith("Fold/Call"):
+                while True:
+                    action = self.decide_action(self.game_status, raise_available="Raise" in line)
+                    self.game_status.you.actions[-1].append(action)
+                    if type(action) is tuple:
+                        action = " ".join((str(i) for i in action))
+                    elif not type(action) is str:
+                        action = str(action)
+                    self.coms.send_line(action)
+                    response = self.coms.read_line()
+                    if response.startswith("ERROR"):
+                        import sys
+                        print(response, file=sys.stderr)
+                    else:
+                        break
+            elif line == "----New Hand----":
+                if len(self.game_status.you.actions[-1]) > 0:
+                    self.game_status.you.actions.append([])
+                for player in self.game_status.players.values():
+                    player.actions.append([])
+                    player.folded = False
+                    player.bet = 0
+                self.game_status.hand = []
+                self.game_status.community_cards = []
+                self.game_status.pot_amount = 0
+                self.game_status.pot_bet = 0
+                self.game_status.your_bet = 0
+            elif line.startswith("The following players are still in:"):
+                names = line.split(":", maxsplit=1)[1].strip()
+                names = (name.strip() for name in names.split(","))
+                if len(self.game_status.players) == 0:
+                    self.game_status.players = {name: Player(name) for name in names if name != self.player_name}
+                else:
+                    self.game_status.players = {player.name: player for player in self.game_status.players.values() \
+                                                if player.name in names}
+
+            elif line == "Money left":
+                for _ in range(len(self.game_status.players)):
+                    line = self.coms.read_line()
+                    line = line.split(":", maxsplit=1)
+                    holdings = int(line[1].strip())
+                    if line[0].startswith("You"):
+                        self.game_status.you.holdings = holdings
+                    else:
+                        self.game_status.players[line[0]].holdings = holdings
+            elif line == "Hand":
+                cards = self.coms.read_line()
+                card_names = (name.strip() for name in cards.split(","))
+                self.game_status.hand = [card_name_lookup[name] for name in card_names]
+            elif line.startswith("Reveal"):
+                cards = self.coms.read_line()
+                card_names = (name.strip() for name in cards.split(","))
+                self.game_status.community_cards += [card_name_lookup[name] for name in card_names]
+            elif line.startswith("Current pot:"):
+                self.game_status.pot_amount = int(line.split(":")[1].strip())
+            elif line.startswith("Current pot bet:"):
+                self.game_status.pot_bet = int(line.split(":")[1].strip())
+            elif line.startswith("Your current bet:"):
+                self.game_status.your_bet = int(line.split(":")[1].strip())
+            elif line.startswith("Your holdings:"):
+                self.game_status.you.holdings = int(line.split(":")[1].strip())
+            elif line.startswith("Opponent action"):
+                player_name, action = (x.strip() for x in line.split(":")[1].strip().split(" ", maxsplit=1))
+                player: Player = self.game_status.players[player_name]
+                if action == "Folded":
+                    player.folded = True
+                    action = "Fold"
+                elif action == "Called":
+                    action = "Call"
+                    diff = self.game_status.pot_bet - player.bet
+                    player.holdings -= diff
+                    player.bet = self.game_status.pot_bet
+                else: # Raise
+                    raise_amount = int(action.split(" ")[2])
+                    action = "Raise", raise_amount
+                    diff = self.game_status.pot_bet - player.bet + raise_amount
+                    player.holdings -= diff
+                    player.bet = self.game_status.pot_bet + raise_amount
+                player.actions[-1].append(action)
             else:
                 pass
 

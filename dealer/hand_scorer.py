@@ -1,7 +1,7 @@
 from itertools import permutations
 from typing import List, Dict, Tuple, Union
 
-from card import Card
+from cards import Card
 
 CARD_NUMS = {str(i+1): i for i in range(13)}
 CARD_SUITS: Dict[int, str] = dict(enumerate(["spades", "hearts", "clubs", "diamonds"]))

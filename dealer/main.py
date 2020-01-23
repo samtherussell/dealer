@@ -33,15 +33,22 @@ def run_lobby(num_players: int):
     print("dealer is listening at {} on port {}".format(ip_address, port))
 
     players = []
+    names = []
     for i in range(num_players):
         conn, _ = s.accept()
         coms = Communicator(conn)
-        welcome = "Welcome to the poker lobby. You are player {} of {}. Please enter name: ".format(i+1, num_players)
-        coms.send(welcome)
-        name = coms.recv(20)
-        wait = "Hi %s, please wait to be dealt your hand\n"%(name)
-        coms.send(wait)
-        print(name, "has joined the game")        
+        coms.send("Welcome to the poker lobby. You are player {} of {}. Please enter name: ".format(i+1, num_players))
+        while True:
+            name: str = coms.recv(20)
+            if name in names:
+                coms.send("Someone else has that name. Please enter a different name: ")
+            elif ',' in name or " " in name:
+                coms.send("Name cannot contain the ',' character. Please enter a different name: ")
+            else:
+                names.append(name)
+                break
+        coms.send("Hi %s, please wait to be dealt your hand\n"%(name))
+        print(name, "has joined the game")
         players.append(Player(i, name, coms))
  
     print("all players have joined")
