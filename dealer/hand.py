@@ -152,7 +152,7 @@ class Hand:
             player.holdings = hand_player.holdings
 
     def notify_players(self, s, exclude=None):
-        for player in self.top_pot.playing_players:
+        for player in self.all_hand_players:
             if exclude is None \
                     or type(exclude) == int and player.ID is not exclude \
                     or type(exclude) == list and player.ID not in exclude:
@@ -171,7 +171,7 @@ class Hand:
 
     def get_blinds(self, small_blind=5, big_blind=10) -> List[Bet]:
         if self.start_pos > len(self.top_pot.playing_players):
-            raise Exception("start position larger than number of players")
+            raise Exception("start position {} larger than number of players".format(self.start_pos))
 
         if small_blind > big_blind:
             raise Exception("Small blind is bigger than big blind")
@@ -363,6 +363,7 @@ class Hand:
         scores.sort(key=lambda x: x[1].value, reverse=True)
 
         print("scores:", scores)
+        self.notify_players("Results [{}]".format(len(scores)))
 
         for score in scores:
             player = score[0]
@@ -374,6 +375,7 @@ class Hand:
             trick_name = score[1].trick_name
             player.coms.send_line("You got {}".format(trick_name))
 
+        self.notify_players("Pots [{}]".format(len(self.pots)))
         winnings = {player.ID: 0 for player in self.all_hand_players}
         print("pots", self.pots)
         for pot in self.pots:
@@ -387,6 +389,7 @@ class Hand:
             for winner in winners:
                 winnings[winner.ID] += share
 
+        self.notify_players("Winnings")
         for player in self.all_hand_players:
             amount = winnings[player.ID]
             player.win(amount)

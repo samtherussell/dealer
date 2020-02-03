@@ -1,5 +1,6 @@
 import socket
 import random
+import sys
 from abc import ABC, abstractmethod
 from typing import Dict, Tuple, List
 
@@ -60,7 +61,7 @@ class PokerPlayerCommunicator:
                 for line in lines[1:-1]:
                     self._lines_buffer.append(line)
 
-            self._line_buffer = lines[-1]
+            self._line_buffer += lines[-1]
 
         return self._lines_buffer.pop(0)
 
@@ -108,7 +109,9 @@ class PokerPlayer(ABC):
 
     def __init__(self, player_name=None):
         if player_name is None:
-            self.player_name = "player_" + str(random.randint(0, 10000))
+            with open("names.txt", "r") as f:
+                names = f.readlines()
+            self.player_name = names[random.randint(0, 4945)].strip()
         else:
             self.player_name = player_name
         self.coms = PokerPlayerCommunicator(verbose=True)
@@ -122,8 +125,10 @@ class PokerPlayer(ABC):
         while True:
             line = self.coms.read_line()
             if line == "Goodbye":  # Game over
+                print("--Game is over")
                 break
             elif line.startswith("Fold/Call"):
+                print("--Input the move")
                 while True:
                     action = self.decide_action(self.game_status, raise_available="Raise" in line)
                     self.game_status.you.actions[-1].append(action)
@@ -134,11 +139,12 @@ class PokerPlayer(ABC):
                     self.coms.send_line(action)
                     response = self.coms.read_line()
                     if response.startswith("ERROR"):
-                        import sys
                         print(response, file=sys.stderr)
+                        self.coms.read_line()  # New prompt
                     else:
                         break
             elif line == "----New Hand----":
+                print("--Resetting hand state")
                 if len(self.game_status.you.actions[-1]) > 0:
                     self.game_status.you.actions.append([])
                 for player in self.game_status.players.values():
@@ -151,16 +157,19 @@ class PokerPlayer(ABC):
                 self.game_status.pot_bet = 0
                 self.game_status.your_bet = 0
             elif line.startswith("The following players are still in:"):
+                print("--Getting which players are still in")
                 names = line.split(":", maxsplit=1)[1].strip()
-                names = (name.strip() for name in names.split(","))
+                names = [name.strip() for name in names.split(",")]
+                print("{} players still in".format(len(names)))
                 if len(self.game_status.players) == 0:
                     self.game_status.players = {name: Player(name) for name in names if name != self.player_name}
                 else:
-                    self.game_status.players = {player.name: player for player in self.game_status.players.values() \
+                    self.game_status.players = {player.name: player for player in self.game_status.players.values()
                                                 if player.name in names}
 
             elif line == "Money left":
-                for _ in range(len(self.game_status.players)):
+                print("--Getting how much money everyone has")
+                for _ in range(len(self.game_status.players) + 1):
                     line = self.coms.read_line()
                     line = line.split(":", maxsplit=1)
                     holdings = int(line[1].strip())
@@ -169,10 +178,12 @@ class PokerPlayer(ABC):
                     else:
                         self.game_status.players[line[0]].holdings = holdings
             elif line == "Hand":
+                print("--Getting my hand cards")
                 cards = self.coms.read_line()
                 card_names = (name.strip() for name in cards.split(","))
                 self.game_status.hand = [card_name_lookup[name] for name in card_names]
             elif line.startswith("Reveal"):
+                print("--Getting revealed cards")
                 cards = self.coms.read_line()
                 card_names = (name.strip() for name in cards.split(","))
                 self.game_status.community_cards += [card_name_lookup[name] for name in card_names]
@@ -185,6 +196,7 @@ class PokerPlayer(ABC):
             elif line.startswith("Your holdings:"):
                 self.game_status.you.holdings = int(line.split(":")[1].strip())
             elif line.startswith("Opponent action"):
+                print("--Getting opponent action")
                 player_name, action = (x.strip() for x in line.split(":")[1].strip().split(" ", maxsplit=1))
                 player: Player = self.game_status.players[player_name]
                 if action == "Folded":
@@ -195,15 +207,31 @@ class PokerPlayer(ABC):
                     diff = self.game_status.pot_bet - player.bet
                     player.holdings -= diff
                     player.bet = self.game_status.pot_bet
-                else: # Raise
+                else:  # Raise
                     raise_amount = int(action.split(" ")[2])
                     action = "Raise", raise_amount
                     diff = self.game_status.pot_bet - player.bet + raise_amount
                     player.holdings -= diff
                     player.bet = self.game_status.pot_bet + raise_amount
                 player.actions[-1].append(action)
-            else:
+            elif line.startswith("Results"):
+                print("--Getting results")
+                num_results = int(line.split(" ")[1][1:-1])
+                for _ in range(num_results):
+                    self.coms.read_line()
+            elif line.startswith("Pots"):
+                print("--Getting pot winners")
+                num_pots = int(line.split(" ")[1][1:-1])
+                for _ in range(num_pots):
+                    self.coms.read_line()
+            elif line == "Winnings":
+                print("--Getting winnings")
+                for _ in range(len(self.game_status.players) + 1):
+                    self.coms.read_line()
+            elif "blind" in line or "You have folded so cannot bet" in line or "You have no more money so cannot bet":
                 pass
+            else:
+                raise Exception("line not handled:", line)
 
     @abstractmethod
     def decide_action(self, game_status, raise_available=True):

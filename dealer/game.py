@@ -25,7 +25,6 @@ class Game:
     def run_hand(self):
         hand = Hand(self.players_still_in, self.deck, self.start_pos)
         hand.run()
-        self.inc_start_position()
 
         bust_players = [player for player in self.players_still_in if not player.has_money()]
         for player in bust_players:
@@ -33,6 +32,7 @@ class Game:
             player.coms.close()
 
         self.players_still_in = [player for player in self.players_still_in if player.has_money()]
+        self.inc_start_position()
 
     def inc_start_position(self):
         x = self.start_pos
