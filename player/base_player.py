@@ -1,8 +1,6 @@
 import socket
 import random
-import sys
-from abc import ABC, abstractmethod
-from typing import Dict, Tuple, List
+from typing import Dict, Tuple, List, Callable, Union
 
 from cards import Card, card_name_lookup
 
@@ -108,9 +106,13 @@ class GameStatus:
                f"Pot bet: {self.pot_bet}, Your bet: {self.your_bet}, Internal State: {self.internal}"
 
 
-class PokerPlayer(ABC):
+ActionDecider = Callable[[GameStatus, bool], Union[str, Tuple[str, int]]]
 
-    def __init__(self, player_name=None):
+
+class PokerPlayer:
+
+    def __init__(self, decide_action: ActionDecider, player_name=None):
+        self.decide_action = decide_action
         if player_name is None:
             with open("names.txt", "r") as f:
                 names = f.readlines()
@@ -133,7 +135,7 @@ class PokerPlayer(ABC):
             elif line.startswith("Fold/Call"):
                 print("--Input the move")
                 while True:
-                    action = self.decide_action(self.game_status, raise_available="Raise" in line)
+                    action = self.decide_action(self.game_status, "Raise" in line)
                     self.game_status.you.actions[-1].append(action)
                     if type(action) is tuple:
                         action = " ".join((str(i) for i in action))
@@ -241,18 +243,9 @@ class PokerPlayer(ABC):
                 pass
             elif line == "You ran out of money":
                 print("--You lose")
-                self.result(False)
                 pass
             elif line == "YOU ARE THE CHAMPION":
                 print("--You win")
-                self.result(True)
                 pass
             else:
                 raise Exception("line not handled:", line)
-
-    @abstractmethod
-    def decide_action(self, game_status, raise_available=True):
-        pass
-
-    def result(self, result):
-        pass

@@ -1,27 +1,18 @@
 import random
-from base_player import PokerPlayer
+from base_player import PokerPlayer, GameStatus
 
 
-class RandomPokerPlayer(PokerPlayer):
-
-    def decide_action(self, game_status, raise_available=True):
-        print("Current state:", str(game_status))
-        options = [lambda: "Fold", lambda: "Call", lambda: ("Raise", random.randint(1, 100))]
-        if raise_available:
-            result = options[random.randint(0, 2)]()
-        else:
-            result = options[random.randint(0, 1)]()
-        return result
-
-    def result(self, result):
-        if result:
-            print("Yey")
-        else:
-            print("Oh dear")
+def decide_action(game_status: GameStatus, raise_available=True):
+    options = [lambda: "Fold", lambda: "Call", lambda: ("Raise", random.randint(1, game_status.you.holdings))]
+    if raise_available:
+        result = options[random.randint(0, 2)]()
+    else:
+        result = options[random.randint(0, 1)]()
+    return result
 
 
 def main():
-    player = RandomPokerPlayer()
+    player = PokerPlayer(decide_action)
     player.play()
 
 
