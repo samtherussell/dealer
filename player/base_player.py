@@ -141,12 +141,10 @@ class PokerPlayer(ABC):
                         action = str(action)
                     self.coms.send_line(action)
                     response = self.coms.read_line()
-                    if response.startswith("ERROR"):
-                        print(response, file=sys.stderr)
-                        self.coms.read_line()  # New prompt
-                    else:
+                    if response.startswith("SUCCESS"):
                         break
-            elif line == "----New Hand----":
+                    self.coms.read_line()  # New prompt
+            elif line.startswith("---- New Hand"):
                 print("--Resetting hand state")
                 if len(self.game_status.you.actions[-1]) > 0:
                     self.game_status.you.actions.append([])
@@ -191,12 +189,16 @@ class PokerPlayer(ABC):
                 card_names = (name.strip() for name in cards.split(","))
                 self.game_status.community_cards += [card_name_lookup[name] for name in card_names]
             elif line.startswith("Current pot:"):
+                print("--Getting current pot")
                 self.game_status.pot_amount = int(line.split(":")[1].strip())
             elif line.startswith("Current pot bet:"):
+                print("--Getting current pot bet")
                 self.game_status.pot_bet = int(line.split(":")[1].strip())
             elif line.startswith("Your current bet:"):
+                print("--Getting your current bet")
                 self.game_status.your_bet = int(line.split(":")[1].strip())
             elif line.startswith("Your holdings:"):
+                print("--Getting your holdings")
                 self.game_status.you.holdings = int(line.split(":")[1].strip())
             elif line.startswith("Opponent action"):
                 print("--Getting opponent action")
@@ -221,21 +223,36 @@ class PokerPlayer(ABC):
                 print("--Getting results")
                 num_results = int(line.split(" ")[1][1:-1])
                 for _ in range(num_results):
-                    self.coms.read_line()
+                    self.coms.read_line()  # Ignore
             elif line.startswith("Pots"):
                 print("--Getting pot winners")
                 num_pots = int(line.split(" ")[1][1:-1])
                 for _ in range(num_pots):
-                    self.coms.read_line()
+                    self.coms.read_line()  # Ignore
             elif line == "Winnings":
                 print("--Getting winnings")
                 for _ in range(len(self.game_status.players) + 1):
-                    self.coms.read_line()
-            elif "blind" in line or "You have folded so cannot bet" in line or "You have no more money so cannot bet":
+                    self.coms.read_line()  # Ignore
+            elif "blind" in line:
+                pass
+            elif line == "You have folded so cannot bet":
+                pass
+            elif line == "You have no more money so cannot bet":
+                pass
+            elif line == "You ran out of money":
+                print("--You lose")
+                self.result(False)
+                pass
+            elif line == "YOU ARE THE CHAMPION":
+                print("--You win")
+                self.result(True)
                 pass
             else:
                 raise Exception("line not handled:", line)
 
     @abstractmethod
     def decide_action(self, game_status, raise_available=True):
+        pass
+
+    def result(self, result):
         pass

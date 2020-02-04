@@ -361,7 +361,7 @@ class Hand:
                                                   if not player.folded]
         scores.sort(key=lambda x: x[1].value, reverse=True)
 
-        print("scores:", scores)
+        print("SCORES:", scores)
         self.notify_players("Results [{}]".format(len(scores)))
 
         for score in scores:
@@ -376,12 +376,11 @@ class Hand:
 
         self.notify_players("Pots [{}]".format(len(self.pots)))
         winnings = {player.ID: 0 for player in self.all_hand_players}
-        print("pots", self.pots)
+        print("POTS:", self.pots)
         for pot in self.pots:
             pot_amount = pot.amount
             player_ids = [p.ID for p in pot.playing_players]
             pot_scores = [(p[0], p[1].value) for p in scores if p[0].ID in player_ids]
-            print(player_ids, pot_scores, pot, scores)
             winners = get_winners(pot_scores)
             share = int(pot_amount / len(winners))
             self.notify_players("{} win {} bet pot worth {} giving {} each"

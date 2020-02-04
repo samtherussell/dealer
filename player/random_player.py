@@ -13,6 +13,12 @@ class RandomPokerPlayer(PokerPlayer):
             result = options[random.randint(0, 1)]()
         return result
 
+    def result(self, result):
+        if result:
+            print("Yey")
+        else:
+            print("Oh dear")
+
 def main():
     player = RandomPokerPlayer()
     player.play()
