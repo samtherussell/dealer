@@ -11,12 +11,15 @@ class Communicator:
  
     def __init__(self, conn):
         self.conn = conn
+        self.name = None
  
-    def send(self, d: str):
+    def send(self, d: str, verbose=True):
+        if verbose:
+            print("sending to {}: {}".format(self.name, d), end="")
         self.conn.send(d.encode("utf8"))
  
-    def send_line(self, d: str):
-        self.send(d + "\n")
+    def send_line(self, d: str, verbose=True):
+        self.send(d + "\n", verbose=verbose)
  
     def send_hand(self, hand: List[Card]):
         self.send_line("Hand\n" + format_cards(hand))
@@ -24,8 +27,11 @@ class Communicator:
     def send_card_reveal(self, reveals: List[Card]):
         self.send_line("Reveal {}\n{}".format(len(reveals), format_cards(reveals)))
  
-    def recv(self, d: int) -> str:
-        return self.conn.recv(d).decode("utf8").strip()
+    def recv(self, d: int, verbose=True) -> str:
+        msg = self.conn.recv(d).decode("utf8").strip()
+        if verbose:
+            print("received from {}: {}".format(self.name, msg))
+        return msg
 
     def close(self):
         self.send_line("Goodbye")

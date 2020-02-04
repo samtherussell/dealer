@@ -49,6 +49,7 @@ def run_lobby(num_players: int):
                 break
         coms.send("Hi %s, please wait to be dealt your hand\n"%(name))
         print(name, "has joined the game")
+        coms.name = name
         players.append(Player(i, name, coms))
  
     print("all players have joined")

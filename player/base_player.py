@@ -33,13 +33,13 @@ class PokerPlayerCommunicator:
         if self.verbose:
             print("Connected to {}:{}".format(ip_address, port))
 
-    def read(self):
+    def read(self, verbose=True):
         if self._socket is None:
             raise Exception("Need to connect before calling read")
         result = self._socket.recv(100).decode("utf8")
         if result == "":
             raise Exception("Connection is closed")
-        if self.verbose:
+        if self.verbose and verbose:
             print("Received:", result, end="")
         return result
 
@@ -52,7 +52,7 @@ class PokerPlayerCommunicator:
 
     def read_line(self) -> str:
         while len(self._lines_buffer) == 0:
-            lines = self.read()
+            lines = self.read(verbose=False)
             lines = lines.split("\n")
             if len(lines) > 1:
                 self._lines_buffer.append(self._line_buffer + lines[0])
@@ -63,7 +63,10 @@ class PokerPlayerCommunicator:
 
             self._line_buffer += lines[-1]
 
-        return self._lines_buffer.pop(0)
+        result = self._lines_buffer.pop(0)
+        if self.verbose:
+            print("Received:", result)
+        return result
 
     def send_line(self, string: str) -> None:
         self.send(string + "\n")

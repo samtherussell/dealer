@@ -106,7 +106,7 @@ def get_winners(scores: List[Tuple[Player, int]]):
 
 class Hand:
 
-    def __init__(self, players: List[Player], deck: List[Card], start_pos: int):
+    def __init__(self, players: List[Player], deck: List[Card], start_pos: int, round_num: int):
 
         self.deck = deck
         self.all_players = players
@@ -118,6 +118,7 @@ class Hand:
         self.face_up_community_cards = []
 
         self.start_pos: int = start_pos
+        self.round_num: int = round_num
         self.top_pot: Pot = Pot(0, 0, list(self.all_hand_players))
         self.pots: List[Pot] = [self.top_pot]
 
@@ -131,7 +132,7 @@ class Hand:
 
     def run(self):
 
-        self.notify_players("----New Hand----")
+        self.notify_players("---- New Hand :: Round {} ----".format(self.round_num))
         self.notify_player_statuses()
         self.deal_hands()
 
@@ -152,21 +153,20 @@ class Hand:
             player.holdings = hand_player.holdings
 
     def notify_players(self, s, exclude=None):
+        print("Sending to all {}".format(s))
         for player in self.all_hand_players:
             if exclude is None \
                     or type(exclude) == int and player.ID is not exclude \
                     or type(exclude) == list and player.ID not in exclude:
-                player.coms.send_line(s)
+                player.coms.send_line(s, verbose=False)
 
     def notify_player_statuses(self):
 
         self.notify_players("The following players are still in: " + ", ".join([p.name for p in self.all_hand_players]))
+        self.notify_players("Money left")
 
         for player in self.all_hand_players:
-            player.coms.send_line("Money left")
-
-        for player in self.all_hand_players:
-            player.coms.send_line("You: {}".format(player.holdings))
+            player.coms.send_line("You: {}".format(player.holdings), verbose=False)
             self.notify_players("{}: {}".format(player.name, player.holdings), exclude=player.ID)
 
     def get_blinds(self, small_blind=5, big_blind=10) -> List[Bet]:
@@ -184,15 +184,17 @@ class Hand:
         bets = []
         for i, player in enumerate(self.top_pot.playing_players):
             if i == (self.start_pos - 1) % len(self.top_pot.playing_players):
-                player.bet(big_blind)
+                blind = min(big_blind, player.holdings)
+                player.bet(blind)
                 player.coms.send_line("You are big blind")
-                bets.append(Bet(big_blind, player))
+                bets.append(Bet(blind, player))
             elif small_blind_enable and i == (self.start_pos - 2) % len(self.top_pot.playing_players):
-                player.bet(small_blind)
+                blind = min(small_blind, player.holdings)
+                player.bet(blind)
                 player.coms.send_line("You are small blind")
-                bets.append(Bet(small_blind, player))
+                bets.append(Bet(blind, player))
             else:
-                player.coms.send_line("You are not the blind")
+                player.coms.send_line("You are not the blind", verbose=False)
 
         return bets
 
@@ -228,8 +230,7 @@ class Hand:
 
         current_index: int = self.start_pos
         round_end_index = self.prev(current_index)
-        while len([p for p in self.top_pot.playing_players if not p.folded]) > 1:
-            print("----HERE-----", self.top_pot.playing_players, current_index)
+        while len([p for p in self.top_pot.playing_players if not p.folded and p.has_money()]) > 1:
             current_player = self.top_pot.playing_players[current_index]
             if current_player.folded:
                 current_player.coms.send_line("You have folded so cannot bet")
@@ -291,7 +292,6 @@ class Hand:
         while True:
             current_player.coms.send_line("/".join(available_options))
             action = current_player.coms.recv(20)
-            print("action: '{}'".format(action))
 
             try:
                 display, reset_round_end_index = self.run_player_action(available_options, bets, current_player, action)
@@ -341,7 +341,6 @@ class Hand:
             bets[current_player.ID].amount += diff
         else:
             bets[current_player.ID] = Bet(diff, current_player)
-        print("Pot raised by {} to {}".format(raise_amount, current_player.bet_amount))
         return "Raised by {} to {}".format(raise_amount, current_player.bet_amount)
 
     def reveal_cards(self, num):
@@ -373,7 +372,7 @@ class Hand:
         for score in scores:
             player = score[0]
             trick_name = score[1].trick_name
-            player.coms.send_line("You got {}".format(trick_name))
+            player.coms.send_line("You got {}".format(trick_name), verbose=False)
 
         self.notify_players("Pots [{}]".format(len(self.pots)))
         winnings = {player.ID: 0 for player in self.all_hand_players}
@@ -382,6 +381,7 @@ class Hand:
             pot_amount = pot.amount
             player_ids = [p.ID for p in pot.playing_players]
             pot_scores = [(p[0], p[1].value) for p in scores if p[0].ID in player_ids]
+            print(player_ids, pot_scores, pot, scores)
             winners = get_winners(pot_scores)
             share = int(pot_amount / len(winners))
             self.notify_players("{} win {} bet pot worth {} giving {} each"
@@ -393,7 +393,7 @@ class Hand:
         for player in self.all_hand_players:
             amount = winnings[player.ID]
             player.win(amount)
-            player.coms.send_line("In total you won {}".format(amount))
+            player.coms.send_line("In total you won {}".format(amount), verbose=False)
             self.notify_players("In total {} won {}".format(player.name, amount), exclude=player.ID)
 
     def __repr__(self):

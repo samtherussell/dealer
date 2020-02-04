@@ -16,6 +16,7 @@ class Game:
         random.shuffle(self.deck)
         
         self.start_pos = 0
+        self.round_num = 1
 
         print("new game started")
 
@@ -23,7 +24,7 @@ class Game:
         return len(self.players_still_in) < 2
  
     def run_hand(self):
-        hand = Hand(self.players_still_in, self.deck, self.start_pos)
+        hand = Hand(self.players_still_in, self.deck, self.start_pos, self.round_num)
         hand.run()
 
         bust_players = [player for player in self.players_still_in if not player.has_money()]
@@ -33,6 +34,7 @@ class Game:
 
         self.players_still_in = [player for player in self.players_still_in if player.has_money()]
         self.inc_start_position()
+        self.round_num += 1
 
     def inc_start_position(self):
         x = self.start_pos
