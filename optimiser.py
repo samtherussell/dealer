@@ -35,8 +35,8 @@ def get_new_inputs(best_value):
     inputs = []
     for _ in range(player_num):
         fold_threshold, call_threshold = best_value
-        fold_threshold += random() * delta - (delta / 2)
-        call_threshold += random() * delta - (delta / 2)
+        fold_threshold = max(fold_threshold + random() * delta - (delta / 2), 0)
+        call_threshold = max(call_threshold + random() * delta - (delta / 2), 0)
         inputs.append((fold_threshold, call_threshold))
     return inputs
 

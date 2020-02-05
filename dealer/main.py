@@ -8,7 +8,8 @@ from .communicator import Communicator
 
 def run_game_for_n_players(num_players, verbose=True):
     players = run_lobby(num_players, verbose=verbose)
-    print("players:", players)
+    if verbose:
+        print("players:", players)
     run_game(players, verbose=verbose)
 
 
@@ -21,7 +22,8 @@ def run_lobby(num_players: int, verbose=True):
     s.bind((ip_address, port))
     s.listen()
 
-    print("dealer is listening at {} on port {}".format(ip_address, port))
+    if verbose:
+        print("dealer is listening at {} on port {}".format(ip_address, port))
 
     players = []
     names = []
@@ -39,11 +41,13 @@ def run_lobby(num_players: int, verbose=True):
                 names.append(name)
                 break
         coms.send("Hi %s, please wait to be dealt your hand\n"%(name))
-        print(name, "has joined the game")
+        if verbose:
+            print(name, "has joined the game")
         coms.name = name
         players.append(Player(i, name, coms))
- 
-    print("all players have joined")
+
+    if verbose:
+        print("all players have joined")
  
     return players
 
