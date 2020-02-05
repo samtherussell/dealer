@@ -1,4 +1,4 @@
-from communicator import Communicator
+from .communicator import Communicator
 
 
 class Player:

@@ -1,8 +1,9 @@
 import socket
 import random
+from os.path import dirname, join
 from typing import Dict, Tuple, List, Callable, Union
 
-from cards import Card, card_name_lookup
+from dealer.cards import Card, card_name_lookup
 
 
 def get_local_ip() -> str:
@@ -114,7 +115,7 @@ class PokerPlayer:
     def __init__(self, decide_action: ActionDecider, player_name=None):
         self.decide_action = decide_action
         if player_name is None:
-            with open("names.txt", "r") as f:
+            with open(join(dirname(__file__), "names.txt"), "r") as f:
                 names = f.readlines()
             self.player_name = names[random.randint(0, 4945)].strip()
         else:
@@ -243,9 +244,9 @@ class PokerPlayer:
                 pass
             elif line == "You ran out of money":
                 print("--You lose")
-                pass
+                return False
             elif line == "YOU ARE THE CHAMPION":
                 print("--You win")
-                pass
+                return True
             else:
                 raise Exception("line not handled:", line)

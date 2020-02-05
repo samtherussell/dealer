@@ -1,5 +1,5 @@
 import random
-from base_player import PokerPlayer, GameStatus
+from .base_player import PokerPlayer, GameStatus
 
 
 def decide_action(game_status: GameStatus, raise_available=True):
@@ -11,8 +11,12 @@ def decide_action(game_status: GameStatus, raise_available=True):
     return result
 
 
+def random_player():
+    return PokerPlayer(decide_action)
+
+
 def main():
-    player = PokerPlayer(decide_action)
+    player = random_player()
     player.play()
 
 

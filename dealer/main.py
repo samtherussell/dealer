@@ -1,23 +1,14 @@
  
 import socket
 
-from game import Game
-from player import Player
-from communicator import Communicator 
+from .game import Game
+from .player import Player
+from .communicator import Communicator
 
 
-def main():
-
-    while True:    
-        num_players = int(input("# players: "))
-        if num_players > 1:
-            break
-        print("must have more than one player")
-
+def run_game_for_n_players(num_players):
     players = run_lobby(num_players)
-
     print("players:", players)
-
     run_game(players)
 
 
@@ -71,7 +62,3 @@ def run_game(players):
     while not game.finished():
         game.run_hand()
     game.congratulate_winner()
-
-
-if __name__ == "__main__":
-    main()

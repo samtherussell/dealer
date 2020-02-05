@@ -1,9 +1,9 @@
 import random
 from typing import List
 
-from hand import Hand
-from player import Player
-from cards import Card, deck
+from .hand import Hand
+from .player import Player
+from .cards import deck
 
 
 class Game:

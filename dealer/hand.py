@@ -1,8 +1,8 @@
 from typing import List, Tuple, Set
 
-from player import Player
-from hand_scorer import get_hand_max, Score
-from cards import Card
+from .player import Player
+from .hand_scorer import get_hand_max, Score
+from .cards import Card
 
 
 class HandPlayer(Player):

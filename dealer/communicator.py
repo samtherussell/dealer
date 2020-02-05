@@ -1,5 +1,5 @@
 from typing import List
-from cards import Card
+from .cards import Card
 
 
 def format_cards(cards: List[Card]) -> str:
