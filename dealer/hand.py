@@ -86,7 +86,10 @@ def get_raise_amount(action: str) -> int:
     action = action.split(" ")
     if len(action) != 2:
         raise Exception("there is no amount to raise by")
-    return int(action[1])
+    num = int(action[1])
+    if num <= 0:
+        raise Exception("raise amount must be positive")
+    return num
 
 
 class OnePlayerLeftException(Exception):
@@ -237,7 +240,7 @@ class Hand:
             elif not current_player.has_money():
                 current_player.coms.send_line("You have no more money so cannot bet")
             else:
-                available_options = get_players_options(current_player, self.top_pot.bet, has_bet)
+                available_options = get_players_options(current_player, self.top_pot.bet + bets.max_raise(), has_bet)
                 current_player.coms.send_line(self.get_player_status(bets, current_player))
 
                 reset_round_end_index = self.get_and_run_player_action(available_options, bets, current_player)
