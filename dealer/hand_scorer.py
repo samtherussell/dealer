@@ -20,7 +20,11 @@ class Score:
 def get_hand_max(cards: List[Card]) -> Score:
     if len(cards) != 7:
         raise Exception("there should be 7 cards")
-    return max([get_cards_max(cards) for cards in combos(cards)], key=lambda x: x.value)
+    return get_partial_hand_max(cards)
+
+
+def get_partial_hand_max(cards: List[Card]) -> Score:
+    return max([get_cards_max(combo) for combo in combos(cards)], key=lambda x: x.value)
 
 
 def combos(cards: List[Card]):

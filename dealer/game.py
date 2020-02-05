@@ -8,7 +8,7 @@ from .cards import deck
 
 class Game:
  
-    def __init__(self, players: List[Player]):
+    def __init__(self, players: List[Player], verbose=True):
  
         self.players_still_in = list(players)
  
@@ -18,13 +18,16 @@ class Game:
         self.start_pos = 0
         self.round_num = 1
 
-        print("new game started")
+        self.verbose = verbose
+
+        if verbose:
+            print("new game started")
 
     def finished(self):
         return len(self.players_still_in) < 2
  
     def run_hand(self):
-        hand = Hand(self.players_still_in, self.deck, self.start_pos, self.round_num)
+        hand = Hand(self.players_still_in, self.deck, self.start_pos, self.round_num, verbose=self.verbose)
         hand.run()
 
         bust_players = [player for player in self.players_still_in if not player.has_money()]

@@ -6,13 +6,13 @@ from .player import Player
 from .communicator import Communicator
 
 
-def run_game_for_n_players(num_players):
-    players = run_lobby(num_players)
+def run_game_for_n_players(num_players, verbose=True):
+    players = run_lobby(num_players, verbose=verbose)
     print("players:", players)
-    run_game(players)
+    run_game(players, verbose=verbose)
 
 
-def run_lobby(num_players: int):
+def run_lobby(num_players: int, verbose=True):
 
     ip_address = get_local_ip()
     port = 8080
@@ -27,7 +27,7 @@ def run_lobby(num_players: int):
     names = []
     for i in range(num_players):
         conn, _ = s.accept()
-        coms = Communicator(conn)
+        coms = Communicator(conn, verbose=verbose)
         coms.send("Welcome to the poker lobby. You are player {} of {}. Please enter name: ".format(i+1, num_players))
         while True:
             name: str = coms.recv(20)
@@ -56,9 +56,9 @@ def get_local_ip() -> str:
     return ip_addresses[0]
 
 
-def run_game(players):
+def run_game(players, verbose=True):
 
-    game = Game(players)
+    game = Game(players, verbose=verbose)
     while not game.finished():
         game.run_hand()
     game.congratulate_winner()

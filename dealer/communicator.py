@@ -9,12 +9,13 @@ def format_cards(cards: List[Card]) -> str:
 
 class Communicator:
  
-    def __init__(self, conn):
+    def __init__(self, conn, verbose=True):
         self.conn = conn
         self.name = None
+        self.verbose = verbose
  
     def send(self, d: str, verbose=True):
-        if verbose:
+        if self.verbose and verbose:
             print("sending to {}: {}".format(self.name, d), end="")
         self.conn.send(d.encode("utf8"))
  
@@ -29,7 +30,7 @@ class Communicator:
  
     def recv(self, d: int, verbose=True) -> str:
         msg = self.conn.recv(d).decode("utf8").strip()
-        if verbose:
+        if self.verbose and verbose:
             print("received from {}: {}".format(self.name, msg))
         return msg
 

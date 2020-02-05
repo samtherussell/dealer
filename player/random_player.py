@@ -11,8 +11,8 @@ def decide_action(game_status: GameStatus, raise_available=True):
     return result
 
 
-def random_player():
-    return PokerPlayer(decide_action)
+def random_player(verbose=True):
+    return PokerPlayer(decide_action, verbose=verbose)
 
 
 def main():

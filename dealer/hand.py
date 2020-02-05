@@ -109,8 +109,9 @@ def get_winners(scores: List[Tuple[Player, int]]):
 
 class Hand:
 
-    def __init__(self, players: List[Player], deck: List[Card], start_pos: int, round_num: int):
+    def __init__(self, players: List[Player], deck: List[Card], start_pos: int, round_num: int, verbose=True):
 
+        self.verbose = verbose
         self.deck = deck
         self.all_players = players
 
@@ -125,7 +126,11 @@ class Hand:
         self.top_pot: Pot = Pot(0, 0, list(self.all_hand_players))
         self.pots: List[Pot] = [self.top_pot]
 
-        print("Hand initiated:", str(self))
+        self.print("Hand initiated:", str(self))
+
+    def print(self, *kargs):
+        if self.verbose:
+            print(*kargs)
 
     def put_cards_back_in_deck(self):
         self.deck.extend(self.discard)
@@ -156,7 +161,7 @@ class Hand:
             player.holdings = hand_player.holdings
 
     def notify_players(self, s, exclude=None):
-        print("Sending to all {}".format(s))
+        self.print("Sending to all {}".format(s))
         for player in self.all_hand_players:
             if exclude is None \
                     or type(exclude) == int and player.ID is not exclude \
@@ -204,7 +209,7 @@ class Hand:
     def deal_hands(self):
         for player in self.top_pot.playing_players:
             player.coms.send_hand(player.hand)
-        print("dealt hands")
+        self.print("dealt hands")
 
     def mod(self, index: int) -> int:
         x = len(self.top_pot.playing_players)
@@ -353,7 +358,7 @@ class Hand:
 
         self.face_down_community_cards = self.face_down_community_cards[num:]
         self.face_up_community_cards = self.face_up_community_cards + cards
-        print("revealed cards:", cards)
+        self.print("revealed cards:", cards)
 
     def decide_winner(self):
 
@@ -364,7 +369,7 @@ class Hand:
                                                   if not player.folded]
         scores.sort(key=lambda x: x[1].value, reverse=True)
 
-        print("SCORES:", scores)
+        self.print("SCORES:", scores)
         self.notify_players("Results [{}]".format(len(scores)))
 
         for score in scores:
@@ -379,7 +384,7 @@ class Hand:
 
         self.notify_players("Pots [{}]".format(len(self.pots)))
         winnings = {player.ID: 0 for player in self.all_hand_players}
-        print("POTS:", self.pots)
+        self.print("POTS:", self.pots)
         for pot in self.pots:
             pot_amount = pot.amount
             player_ids = [p.ID for p in pot.playing_players]
