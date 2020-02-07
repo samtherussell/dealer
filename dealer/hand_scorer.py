@@ -32,8 +32,6 @@ def combos(cards: List[Card]):
 
 
 def get_cards_max(cards: List[Card]) -> Score:
-    if len(cards) != 5:
-        raise Exception("there should be 5 cards")
 
     match, trick_name, points = is_royal_flush(cards)
     if match:
@@ -105,6 +103,8 @@ def is_4_of_a_kind(cards: List[Card]) -> Union[Tuple[bool, str, int], Tuple[bool
 
 
 def is_full_house(cards: List[Card]) -> Union[Tuple[bool, str, int], Tuple[bool, None, None]]:
+    if len(cards) < 5:
+        return False, None, None
     uniques = set(cards)
     if len(uniques) == 2:
         three_of_kind = [card for card in uniques if cards.count(card) == 3]
@@ -114,6 +114,8 @@ def is_full_house(cards: List[Card]) -> Union[Tuple[bool, str, int], Tuple[bool,
 
 
 def is_flush(cards: List[Card]) -> Union[Tuple[bool, str, int], Tuple[bool, None, None]]:
+    if len(cards) < 5:
+        return False, None, None
     if all_same([get_suit(card) for card in cards]):
         return True, trick_str("Flush", cards), get_score(5, cards)
     else:
@@ -121,6 +123,8 @@ def is_flush(cards: List[Card]) -> Union[Tuple[bool, str, int], Tuple[bool, None
 
 
 def is_straight(cards: List[Card]) -> Union[Tuple[bool, str, int], Tuple[bool, None, None]]:
+    if len(cards) < 5:
+        return False, None, None
     if len(cards) < 2:
         raise Exception("you probably didn't want to call this")
     numbers = get_numbers(cards)
@@ -143,6 +147,8 @@ def is_3_of_a_kind(cards: List[Card]) -> Union[Tuple[bool, str, int], Tuple[bool
 
 
 def is_two_pair(cards: List[Card]) -> Union[Tuple[bool, str, int], Tuple[bool, None, None]]:
+    if len(cards) < 4:
+        return False, None, None
     uniques = set(cards)
     match = len(uniques) == 3
     if match:
@@ -161,6 +167,8 @@ def is_2_of_a_kind(cards: List[Card]) -> Union[Tuple[bool, str, int], Tuple[bool
 
 
 def is_n_of_a_kind(cards: List[Card], n) -> Union[Tuple[bool, List[Card]], Tuple[bool, None]]:
+    if len(cards) < n:
+        return False, None
     numbers = get_numbers(cards)
     for x in reversed(range(13)):
         if is_n_of_an_x(numbers, n, x):

@@ -9,8 +9,8 @@ from player.random_player import random_player
 
 from threading import Thread
 
-player_num = 4
-rand_player_num = 2
+player_num = 3
+rand_player_num = 1
 base_value = (0.3, 0.6)
 delta = 0.4
 
@@ -43,8 +43,9 @@ def get_new_inputs(best_value):
 
 def run_some_games(inputs):
     results = [0] * (player_num + rand_player_num)
-    for _ in range(30):
+    for _ in range(20):
         run_game(inputs, results)
+        print(".", end="")
     print(results)
     return results
 
